@@ -114,35 +114,6 @@ impl<R: std::io::BufRead> FastXReader<R>{
                     fasta_temp_buf: Vec::<u8>::new(),}
     }
 
-    pub fn into_db(&mut self) -> crate::seq_db::SeqDB{
-
-        let mut headbuf: Vec<u8> = Vec::new();
-        let mut seqbuf: Vec<u8> = Vec::new();
-        let mut qualbuf: Option<Vec<u8>> = match self.filetype{
-            FileType::FASTQ => Some(Vec::new()),
-            FileType::FASTA => None,
-        };
-
-        let mut head_starts: Vec<usize> = vec![0];
-        let mut seq_starts: Vec<usize> = vec![0];
-        let mut qual_starts: Option<Vec<usize>> = match self.filetype{
-            FileType::FASTQ => Some(vec![0]),
-            FileType::FASTA => None,
-        };
-
-        while let Some(rec) = self.next(){
-            headbuf.extend_from_slice(rec.head);
-            seqbuf.extend_from_slice(rec.seq);
-            if let Some(qual) = rec.qual{
-                qualbuf.as_mut().expect("Error: found a fastq record in a fasta stream.").extend_from_slice(qual);
-                let q: &mut Vec<usize> = qual_starts.as_mut().unwrap();
-                q.push(q.len() as usize);
-            }
-            head_starts.push(headbuf.len() as usize);
-            seq_starts.push(seqbuf.len() as usize);
-        }
-        crate::seq_db::SeqDB{headbuf, seqbuf, qualbuf, head_starts, seq_starts, qual_starts}
-    }
 
 }
 
@@ -150,7 +121,8 @@ impl<R: std::io::BufRead> FastXReader<R>{
 // Trait for a stream returning SeqRecord objects.
 pub trait SeqRecordProducer {
     fn next(&mut self) -> Option<RefRecord>;
-    fn filetype(&self )-> FileType; 
+    fn into_db(&mut self) -> crate::seq_db::SeqDB; // Todo: could we move instead of borrowing?
+    fn filetype(&self)-> FileType; 
 }
 
 pub struct DynamicFastXReader {
@@ -160,7 +132,7 @@ pub struct DynamicFastXReader {
 // A class that contains a dynamic trait object for different
 // types of input streams.
 impl DynamicFastXReader {
-
+ 
     // Need to constrain + 'static because boxed things always need to have a static
     // lifetime.
     pub fn new_from_input_stream<R: std::io::BufRead + 'static>(r: R, filetype: FileType) -> Self{
@@ -211,19 +183,53 @@ impl DynamicFastXReader {
 
     pub fn filetype(&self)-> FileType{
         self.stream.filetype()
-    } 
+    }
+
+    pub fn into_db(&mut self) -> crate::seq_db::SeqDB{
+        self.stream.into_db()
+    }
 
 }
 
 // Implement common SeqStream trait for all
 // FastXReaders over the generic parameter R.
 impl<R: BufRead> SeqRecordProducer for FastXReader<R>{
+
     fn next(&mut self) -> Option<RefRecord>{
         self.next()
     }
 
     fn filetype(&self)-> FileType{
         self.filetype
+    }
+
+    fn into_db(&mut self) -> crate::seq_db::SeqDB{
+
+        let mut headbuf: Vec<u8> = Vec::new();
+        let mut seqbuf: Vec<u8> = Vec::new();
+        let mut qualbuf: Option<Vec<u8>> = match self.filetype{
+            FileType::FASTQ => Some(Vec::new()),
+            FileType::FASTA => None,
+        };
+
+        let mut head_starts: Vec<usize> = vec![0];
+        let mut seq_starts: Vec<usize> = vec![0];
+        let mut qual_starts: Option<Vec<usize>> = match self.filetype{
+            FileType::FASTQ => Some(vec![0]),
+            FileType::FASTA => None,
+        };
+
+        while let Some(rec) = self.next(){
+            headbuf.extend_from_slice(rec.head);
+            seqbuf.extend_from_slice(rec.seq);
+            if let Some(qual) = rec.qual{
+                qualbuf.as_mut().expect("Error: found a fastq record in a fasta stream.").extend_from_slice(qual);
+                qual_starts.as_mut().unwrap().push(qualbuf.as_ref().unwrap().len());
+            }
+            head_starts.push(headbuf.len() as usize);
+            seq_starts.push(seqbuf.len() as usize);
+        }
+        crate::seq_db::SeqDB{headbuf, seqbuf, qualbuf, head_starts, seq_starts, qual_starts}
     }
 }
 

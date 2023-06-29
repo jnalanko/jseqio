@@ -6,14 +6,6 @@
 
 
 
-// Questions: BufRead or Read
-
-// Functionality:
-// In-memory: all().iter()
-// Streaming: next()
-// Get name which is the first token of the header
-// Result types
-// Figure out file extension string including the .gz part
 
 /*
 struct SeqDB {

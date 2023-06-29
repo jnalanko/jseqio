@@ -10,7 +10,7 @@ pub struct SeqDB {
 }
 
 impl SeqDB{
-    fn iter(&self) -> SeqDBIterator {
+    pub fn iter(&self) -> SeqDBIterator {
         SeqDBIterator{seq_db: self, pos: 0}
     }
 }

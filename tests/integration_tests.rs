@@ -200,3 +200,12 @@ fn test_figure_out_file_format() {
         _ => false,
     });
 }
+
+#[test]
+fn test_into_db(){
+    let mut reader1 = DynamicFastXReader::new_from_file(&String::from("tests/data/reads.fastq"));
+    let mut db = reader1.into_db();
+    for rec in db.iter() {
+        eprintln!("{:?}", rec);
+    }
+}
