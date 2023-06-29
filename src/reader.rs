@@ -114,6 +114,36 @@ impl<R: std::io::BufRead> FastXReader<R>{
                     fasta_temp_buf: Vec::<u8>::new(),}
     }
 
+    pub fn into_db(&mut self) -> crate::seq_db::SeqDB{
+
+        let mut headbuf: Vec<u8> = Vec::new();
+        let mut seqbuf: Vec<u8> = Vec::new();
+        let mut qualbuf: Option<Vec<u8>> = match self.filetype{
+            FileType::FASTQ => Some(Vec::new()),
+            FileType::FASTA => None,
+        };
+
+        let mut head_starts: Vec<usize> = vec![0];
+        let mut seq_starts: Vec<usize> = vec![0];
+        let mut qual_starts: Option<Vec<usize>> = match self.filetype{
+            FileType::FASTQ => Some(vec![0]),
+            FileType::FASTA => None,
+        };
+
+        while let Some(rec) = self.next(){
+            headbuf.extend_from_slice(rec.head);
+            seqbuf.extend_from_slice(rec.seq);
+            if let Some(qual) = rec.qual{
+                qualbuf.as_mut().expect("Error: found a fastq record in a fasta stream.").extend_from_slice(qual);
+                let q: &mut Vec<usize> = qual_starts.as_mut().unwrap();
+                q.push(q.len() as usize);
+            }
+            head_starts.push(headbuf.len() as usize);
+            seq_starts.push(seqbuf.len() as usize);
+        }
+        crate::seq_db::SeqDB{headbuf, seqbuf, qualbuf, head_starts, seq_starts, qual_starts}
+    }
+
 }
 
 
