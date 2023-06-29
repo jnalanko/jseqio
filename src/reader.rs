@@ -196,3 +196,4 @@ impl<R: BufRead> SeqRecordProducer for FastXReader<R>{
         self.filetype
     }
 }
+

@@ -15,6 +15,7 @@ use flate2::read::MultiGzDecoder;
 // Result types
 // Figure out file extension string including the .gz part
 
+/*
 struct SeqDB {
     headbuf: Vec<u8>,
     seqbuf: Vec<u8>,
@@ -58,7 +59,7 @@ impl<'a> Iterator for SeqDBIterator<'a> {
         }
     }
 }
-
+*/
 fn main() {
 
     //let reader = std::fs::File::open("filename.txt");
