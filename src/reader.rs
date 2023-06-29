@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{Read, BufRead, BufReader};
+use std::io::{BufRead, BufReader};
 use flate2::read::MultiGzDecoder;
 use crate::{FileType, figure_out_file_format};
 use crate::record::RefRecord;

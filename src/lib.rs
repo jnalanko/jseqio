@@ -5,10 +5,6 @@ pub mod reader;
 pub mod writer;
 pub mod record;
 
-use reader::{DynamicFastXReader, FastXReader};
-use writer::{DynamicFastXWriter, FastXWriter};
-use record::{RefRecord, OwnedRecord};
-
 #[derive(Copy, Clone)]
 pub enum FileType{
     FASTA,
@@ -40,6 +36,9 @@ mod tests {
     use std::io::BufReader;
 
     use super::*;
+    use super::reader::*;
+    use super::writer::*;
+    use super::record::*;
 
     #[test]
     fn fastq() {

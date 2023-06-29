@@ -7,7 +7,7 @@ use flate2::Compression;
 use flate2::write::GzEncoder;
 
 use crate::FileType;
-use crate::record::{RefRecord, OwnedRecord, Record};
+use crate::record::{RefRecord, Record};
 use crate::figure_out_file_format;
 
 trait SeqRecordWriter{
