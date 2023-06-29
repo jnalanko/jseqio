@@ -41,7 +41,7 @@ mod tests {
 
     use super::*;
 
-
+    #[test]
     fn fastq() {
         let headers = vec!(
             "SRR403017.1 HWUSI-EAS108E_0007:3:1:3797:973/1",
@@ -192,6 +192,7 @@ mod tests {
     
     }
     
+    #[test]
     fn test_figure_out_file_format(){
         assert!(match figure_out_file_format("aa.fna") {(FileType::FASTA,false) => true, _ => false});
         assert!(match figure_out_file_format("aa.fq") {(FileType::FASTQ,false) => true, _ => false});
