@@ -204,8 +204,18 @@ fn test_figure_out_file_format() {
 #[test]
 fn test_into_db(){
     let mut reader1 = DynamicFastXReader::new_from_file(&String::from("tests/data/reads.fastq"));
-    let mut db = reader1.into_db();
-    for rec in db.iter() {
-        eprintln!("{:?}", rec);
+    let db = reader1.into_db();
+    let db_records: Vec<RefRecord> = db.iter().collect();
+    
+    let mut reader2 = DynamicFastXReader::new_from_file(&String::from("tests/data/reads.fastq"));
+
+    let mut i = 0 as usize;
+    while let Some(record) = reader2.read_next() {
+        assert_eq!(record.head, db_records[i].head);
+        assert_eq!(record.seq, db_records[i].seq);
+        assert_eq!(record.qual, db_records[i].qual);
+        i += 1;
     }
+
+    assert_eq!(i, db_records.len()); // Check that we read all records and no more than that
 }
