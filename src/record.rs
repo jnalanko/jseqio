@@ -1,5 +1,11 @@
 use std::fmt;
 
+pub trait Record{
+    fn head(&self) -> &[u8];
+    fn seq(&self) -> &[u8];
+    fn qual(&self) -> Option<&[u8]>;
+}
+
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct OwnedRecord{
     pub head: Vec<u8>,    
@@ -36,6 +42,24 @@ impl OwnedRecord{
                 Some(q) => Some(q.as_slice()), 
                 None => None
             }
+        }
+    }
+}
+
+
+impl<'a> Record for RefRecord<'a>{
+    fn head(&self) -> &[u8]{self.head}
+    fn seq(&self) -> &[u8]{self.seq}
+    fn qual(&self) -> Option<&[u8]>{self.qual}
+}
+
+impl<'a> Record for OwnedRecord{
+    fn head(&self) -> &[u8]{self.head.as_slice()}
+    fn seq(&self) -> &[u8]{self.seq.as_slice()}
+    fn qual(&self) -> Option<&[u8]>{
+        match &self.qual{
+            Some(q) => return Some(q.as_slice()),
+            None => None,
         }
     }
 }

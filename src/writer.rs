@@ -7,7 +7,7 @@ use flate2::Compression;
 use flate2::write::GzEncoder;
 
 use crate::FileType;
-use crate::record::RefRecord;
+use crate::record::{RefRecord, OwnedRecord, Record};
 use crate::figure_out_file_format;
 
 pub trait SeqRecordWriter{
@@ -31,8 +31,8 @@ pub struct FastXWriter<W: Write>{
 
 impl DynamicFastXWriter{
 
-    pub fn write(&mut self, rec: &RefRecord){
-        self.stream.write(rec.head, rec.seq, rec.qual);
+    pub fn write<Rec: Record>(&mut self, rec: &Rec){
+        self.stream.write(rec.head(), rec.seq(), rec.qual());
     }
 
     // No need to give a buffered writer. Buffering is handled internally.
@@ -77,22 +77,22 @@ impl DynamicFastXWriter{
 }
 
 impl<W: Write> FastXWriter<W>{
-    pub fn write(&mut self, rec: &RefRecord){
+    pub fn write<Rec : Record>(&mut self, rec: &Rec){
         match &self.filetype{
             FileType::FASTA => {
                 self.output.write(b">").expect("Error writing output");
-                self.output.write(rec.head).expect("Error writing output");
+                self.output.write(rec.head()).expect("Error writing output");
                 self.output.write(b"\n").expect("Error writing output");
-                self.output.write(rec.seq).expect("Error writing output");
+                self.output.write(rec.seq()).expect("Error writing output");
                 self.output.write(b"\n").expect("Error writing output");
             }
             FileType::FASTQ => {
                 self.output.write(b"@").expect("Error writing output");
-                self.output.write(rec.head).expect("Error writing output");
+                self.output.write(rec.head()).expect("Error writing output");
                 self.output.write(b"\n").expect("Error writing output");
-                self.output.write(rec.seq).expect("Error writing output");
+                self.output.write(rec.seq()).expect("Error writing output");
                 self.output.write(b"\n+\n").expect("Error writing output");
-                self.output.write(rec.qual.expect("Quality values missing")).expect("Error writing output");
+                self.output.write(rec.qual().expect("Quality values missing")).expect("Error writing output");
                 self.output.write(b"\n").expect("Error writing output");
             }
         }
