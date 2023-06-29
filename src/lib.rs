@@ -4,6 +4,7 @@ use std::str;
 pub mod reader;
 pub mod writer;
 pub mod record;
+pub mod seq_db;
 
 #[derive(Copy, Clone)]
 pub enum FileType{
