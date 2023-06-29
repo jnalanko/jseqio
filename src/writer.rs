@@ -10,7 +10,7 @@ use crate::FileType;
 use crate::record::{RefRecord, OwnedRecord, Record};
 use crate::figure_out_file_format;
 
-pub trait SeqRecordWriter{
+trait SeqRecordWriter{
     // Can not take a Record trait object because then we can't
     // for some reason put a SeqRecordWriter into a box.
     // So we take the header, sequence and quality values as slices.
