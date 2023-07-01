@@ -1,6 +1,6 @@
 // Unit tests
 #[cfg(test)]
-use std::io::BufReader;
+use std::io::{BufReader};
 
 use jseqio::reader::*;
 use jseqio::record::*;
@@ -181,4 +181,12 @@ fn test_into_db(){
     }
 
     assert_eq!(i, db_records.len()); // Check that we read all records and no more than that
+
+    // Test also the non-dynamic version
+    let db2 = FastXReader::new(
+        std::io::BufReader::new(std::fs::File::open("tests/data/reads.fastq").unwrap()),
+        FileType::FASTQ).into_db();
+    let db2_records: Vec<RefRecord> = db2.iter().collect();
+
+    assert_eq!(db_records, db2_records);
 }
