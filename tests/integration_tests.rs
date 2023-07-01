@@ -39,7 +39,7 @@ fn fastq() {
 
     let mut owned_records: Vec<OwnedRecord> = vec![];
     let mut seqs_read = 0;
-    while let Some(record) = reader.read_next() {
+    while let Some(record) = reader.read_next().unwrap() {
         assert_eq!(record.head, headers[seqs_read].as_bytes());
         assert_eq!(record.seq, seqs[seqs_read].as_bytes());
         assert_eq!(record.qual.unwrap(), quals[seqs_read].as_bytes());
@@ -63,7 +63,7 @@ fn fastq() {
 
     let mut reader2 = FastXReader::new(written_data.as_slice(), FileType::FASTQ);
     let mut seqs_read2 = 0;
-    while let Some(record) = reader2.read_next() {
+    while let Some(record) = reader2.read_next().unwrap() {
         dbg!(&record);
         assert_eq!(record.head, headers[seqs_read2].as_bytes());
         assert_eq!(record.seq, seqs[seqs_read2].as_bytes());
@@ -116,7 +116,7 @@ fn fasta() {
 
     let mut owned_records: Vec<OwnedRecord> = vec![];
     let mut seqs_read = 0;
-    while let Some(record) = reader.read_next() {
+    while let Some(record) = reader.read_next().unwrap() {
         dbg!(&record);
         assert_eq!(record.head, headers[seqs_read].as_bytes());
         assert_eq!(record.seq, seqs[seqs_read].as_bytes());
@@ -143,7 +143,7 @@ fn fasta() {
 
     let mut reader2 = FastXReader::new(written_data.as_slice(), FileType::FASTA);
     let mut seqs_read2 = 0;
-    while let Some(record) = reader2.read_next() {
+    while let Some(record) = reader2.read_next().unwrap() {
         dbg!(&record);
         assert_eq!(record.head, headers[seqs_read2].as_bytes());
         assert_eq!(record.seq, seqs[seqs_read2].as_bytes());
@@ -167,13 +167,13 @@ fn test_figure_out_file_format() {
 #[test]
 fn test_into_db(){
     let reader1 = DynamicFastXReader::new_from_file(&String::from("tests/data/reads.fastq"));
-    let db = reader1.into_db();
+    let db = reader1.into_db().unwrap();
     let db_records: Vec<RefRecord> = db.iter().collect();
     
     let mut reader2 = DynamicFastXReader::new_from_file(&String::from("tests/data/reads.fastq"));
 
     let mut i: usize = 0;
-    while let Some(record) = reader2.read_next() {
+    while let Some(record) = reader2.read_next().unwrap() {
         assert_eq!(record.head, db_records[i].head);
         assert_eq!(record.seq, db_records[i].seq);
         assert_eq!(record.qual, db_records[i].qual);
@@ -185,7 +185,7 @@ fn test_into_db(){
     // Test also the non-dynamic version
     let db2 = FastXReader::new(
         std::io::BufReader::new(std::fs::File::open("tests/data/reads.fastq").unwrap()),
-        FileType::FASTQ).into_db();
+        FileType::FASTQ).into_db().unwrap();
     let db2_records: Vec<RefRecord> = db2.iter().collect();
 
     assert_eq!(db_records, db2_records);
