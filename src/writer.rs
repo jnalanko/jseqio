@@ -44,8 +44,8 @@ impl DynamicFastXWriter{
     // Write to a file
     // No need to give a buffered writer. Buffering is handled internally.
     pub fn new_to_file(filename: &String) -> Self {
-        let output = File::create(&filename).unwrap();
-        match figure_out_file_format(&filename.as_str()){
+        let output = File::create(filename).unwrap();
+        match figure_out_file_format(filename.as_str()){
             (FileType::FASTQ, true) =>{
                 let gzencoder = GzEncoder::<File>::new(output, Compression::fast());
                 Self::new_to_stream(gzencoder, FileType::FASTQ)
@@ -80,27 +80,27 @@ impl<W: Write> FastXWriter<W>{
     pub fn write<Rec : Record>(&mut self, rec: &Rec){
         match &self.filetype{
             FileType::FASTA => {
-                self.output.write(b">").expect("Error writing output");
-                self.output.write(rec.head()).expect("Error writing output");
-                self.output.write(b"\n").expect("Error writing output");
-                self.output.write(rec.seq()).expect("Error writing output");
-                self.output.write(b"\n").expect("Error writing output");
+                self.output.write_all(b">").expect("Error writing output");
+                self.output.write_all(rec.head()).expect("Error writing output");
+                self.output.write_all(b"\n").expect("Error writing output");
+                self.output.write_all(rec.seq()).expect("Error writing output");
+                self.output.write_all(b"\n").expect("Error writing output");
             }
             FileType::FASTQ => {
-                self.output.write(b"@").expect("Error writing output");
-                self.output.write(rec.head()).expect("Error writing output");
-                self.output.write(b"\n").expect("Error writing output");
-                self.output.write(rec.seq()).expect("Error writing output");
-                self.output.write(b"\n+\n").expect("Error writing output");
-                self.output.write(rec.qual().expect("Quality values missing")).expect("Error writing output");
-                self.output.write(b"\n").expect("Error writing output");
+                self.output.write_all(b"@").expect("Error writing output");
+                self.output.write_all(rec.head()).expect("Error writing output");
+                self.output.write_all(b"\n").expect("Error writing output");
+                self.output.write_all(rec.seq()).expect("Error writing output");
+                self.output.write_all(b"\n+\n").expect("Error writing output");
+                self.output.write_all(rec.qual().expect("Quality values missing")).expect("Error writing output");
+                self.output.write_all(b"\n").expect("Error writing output");
             }
         }
     }
 
     pub fn new(output: W, filetype: FileType) -> Self{
         Self{
-            filetype: filetype,
+            filetype,
             output: BufWriter::<W>::new(output)
         }
     }

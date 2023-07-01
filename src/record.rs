@@ -25,10 +25,7 @@ impl<'a> RefRecord<'a>{
         OwnedRecord { 
             head: self.head.to_vec(), 
             seq: self.seq.to_vec(), 
-            qual: match self.qual {
-                Some(q) => Some(q.to_vec()), 
-                None => None
-            }
+            qual: self.qual.map(|q| q.to_vec()),
         }
     }
 }
@@ -53,7 +50,7 @@ impl<'a> Record for RefRecord<'a>{
     fn qual(&self) -> Option<&[u8]>{self.qual}
 }
 
-impl<'a> Record for OwnedRecord{
+impl Record for OwnedRecord{
     fn head(&self) -> &[u8]{self.head.as_slice()}
     fn seq(&self) -> &[u8]{self.seq.as_slice()}
     fn qual(&self) -> Option<&[u8]>{

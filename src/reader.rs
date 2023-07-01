@@ -16,7 +16,7 @@ pub struct FastXReader<R: std::io::BufRead>{
 }
 
 impl<R: std::io::BufRead> FastXReader<R>{
-    pub fn next(&mut self) -> Option<RefRecord>{
+    pub fn read_next(&mut self) -> Option<RefRecord>{
         if matches!(self.filetype, FileType::FASTQ){
             // FASTQ format
 
@@ -60,7 +60,7 @@ impl<R: std::io::BufRead> FastXReader<R>{
             self.head_buf.clear();
 
             // Read header line
-            if self.fasta_temp_buf.len() == 0 {
+            if self.fasta_temp_buf.is_empty() {
                 // This is the first record -> read header from input
                 let bytes_read = self.input.read_until(b'\n', &mut self.head_buf);
                 if bytes_read.expect("I/O error.") == 0 {return None} // End of stream
@@ -77,7 +77,7 @@ impl<R: std::io::BufRead> FastXReader<R>{
                     Ok(bytes_read) => {
                         if bytes_read == 0{
                             // No more bytes left to read
-                            if self.seq_buf.len() == 0{
+                            if self.seq_buf.is_empty(){
                                 // Stream ends with an empty sequence
                                 panic!("Empty sequence in FASTA file");
                             }
@@ -105,8 +105,8 @@ impl<R: std::io::BufRead> FastXReader<R>{
     }
 
     pub fn new(input: R, filetype: FileType) -> Self{
-        FastXReader{filetype: filetype,
-                    input: input,
+        FastXReader{filetype,
+                    input,
                     seq_buf: Vec::<u8>::new(),
                     head_buf: Vec::<u8>::new(),
                     qual_buf: Vec::<u8>::new(),
@@ -120,7 +120,7 @@ impl<R: std::io::BufRead> FastXReader<R>{
 
 // Trait for a stream returning SeqRecord objects.
 pub trait SeqRecordProducer {
-    fn next(&mut self) -> Option<RefRecord>;
+    fn read_next(&mut self) -> Option<RefRecord>;
     fn into_db(&mut self) -> crate::seq_db::SeqDB; // Todo: could we move instead of borrowing?
     fn filetype(&self)-> FileType; 
 }
@@ -142,8 +142,8 @@ impl DynamicFastXReader {
 
     // New from file
     pub fn new_from_file(filename: &String) -> Self {
-        let input = File::open(&filename).unwrap();
-        let (fileformat, gzipped) = figure_out_file_format(&filename.as_str());
+        let input = File::open(filename).unwrap();
+        let (fileformat, gzipped) = figure_out_file_format(filename.as_str());
         if gzipped{
 
             // The GzDecoder structs have internal buffering, so we can feed in an unbuffered File stream.
@@ -178,7 +178,7 @@ impl DynamicFastXReader {
 
     // Returns None if no more records
     pub fn read_next(&mut self) -> Option<RefRecord>{
-        return self.stream.next()
+        return self.stream.read_next()
     }
 
     pub fn filetype(&self)-> FileType{
@@ -195,8 +195,8 @@ impl DynamicFastXReader {
 // FastXReaders over the generic parameter R.
 impl<R: BufRead> SeqRecordProducer for FastXReader<R>{
 
-    fn next(&mut self) -> Option<RefRecord>{
-        self.next()
+    fn read_next(&mut self) -> Option<RefRecord>{
+        self.read_next()
     }
 
     fn filetype(&self)-> FileType{
@@ -219,15 +219,15 @@ impl<R: BufRead> SeqRecordProducer for FastXReader<R>{
             FileType::FASTA => None,
         };
 
-        while let Some(rec) = self.next(){
+        while let Some(rec) = self.read_next(){
             headbuf.extend_from_slice(rec.head);
             seqbuf.extend_from_slice(rec.seq);
             if let Some(qual) = rec.qual{
                 qualbuf.as_mut().expect("Error: found a fastq record in a fasta stream.").extend_from_slice(qual);
                 qual_starts.as_mut().unwrap().push(qualbuf.as_ref().unwrap().len());
             }
-            head_starts.push(headbuf.len() as usize);
-            seq_starts.push(seqbuf.len() as usize);
+            head_starts.push(headbuf.len());
+            seq_starts.push(seqbuf.len());
         }
         crate::seq_db::SeqDB{headbuf, seqbuf, qualbuf, head_starts, seq_starts, qual_starts}
     }

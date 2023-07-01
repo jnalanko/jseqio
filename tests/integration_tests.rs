@@ -39,16 +39,12 @@ fn fastq() {
 
     let mut owned_records: Vec<OwnedRecord> = vec![];
     let mut seqs_read = 0;
-    loop {
-        if let Some(record) = reader.next() {
-            assert_eq!(record.head, headers[seqs_read].as_bytes());
-            assert_eq!(record.seq, seqs[seqs_read].as_bytes());
-            assert_eq!(record.qual.unwrap(), quals[seqs_read].as_bytes());
-            owned_records.push(record.to_owned());
-            seqs_read += 1;
-        } else {
-            break;
-        };
+    while let Some(record) = reader.read_next() {
+        assert_eq!(record.head, headers[seqs_read].as_bytes());
+        assert_eq!(record.seq, seqs[seqs_read].as_bytes());
+        assert_eq!(record.qual.unwrap(), quals[seqs_read].as_bytes());
+        owned_records.push(record.to_owned());
+        seqs_read += 1;
     }
     assert_eq!(seqs_read, n_seqs);
 
@@ -67,16 +63,12 @@ fn fastq() {
 
     let mut reader2 = FastXReader::new(written_data.as_slice(), FileType::FASTQ);
     let mut seqs_read2 = 0;
-    loop {
-        if let Some(record) = reader2.next() {
-            dbg!(&record);
-            assert_eq!(record.head, headers[seqs_read2].as_bytes());
-            assert_eq!(record.seq, seqs[seqs_read2].as_bytes());
-            assert_eq!(record.qual.unwrap(), quals[seqs_read2].as_bytes());
-            seqs_read2 += 1;
-        } else {
-            break;
-        };
+    while let Some(record) = reader2.read_next() {
+        dbg!(&record);
+        assert_eq!(record.head, headers[seqs_read2].as_bytes());
+        assert_eq!(record.seq, seqs[seqs_read2].as_bytes());
+        assert_eq!(record.qual.unwrap(), quals[seqs_read2].as_bytes());
+        seqs_read2 += 1;
     }
     assert_eq!(seqs_read2, n_seqs);
 }
@@ -124,17 +116,13 @@ fn fasta() {
 
     let mut owned_records: Vec<OwnedRecord> = vec![];
     let mut seqs_read = 0;
-    loop {
-        if let Some(record) = reader.next() {
-            dbg!(&record);
-            assert_eq!(record.head, headers[seqs_read].as_bytes());
-            assert_eq!(record.seq, seqs[seqs_read].as_bytes());
-            assert_eq!(record.qual, None);
-            owned_records.push(record.to_owned());
-            seqs_read += 1;
-        } else {
-            break;
-        };
+    while let Some(record) = reader.read_next() {
+        dbg!(&record);
+        assert_eq!(record.head, headers[seqs_read].as_bytes());
+        assert_eq!(record.seq, seqs[seqs_read].as_bytes());
+        assert_eq!(record.qual, None);
+        owned_records.push(record.to_owned());
+        seqs_read += 1;
     }
     assert_eq!(seqs_read, n_seqs);
 
@@ -155,50 +143,25 @@ fn fasta() {
 
     let mut reader2 = FastXReader::new(written_data.as_slice(), FileType::FASTA);
     let mut seqs_read2 = 0;
-    loop {
-        if let Some(record) = reader2.next() {
-            dbg!(&record);
-            assert_eq!(record.head, headers[seqs_read2].as_bytes());
-            assert_eq!(record.seq, seqs[seqs_read2].as_bytes());
-            assert_eq!(record.qual, None);
-            seqs_read2 += 1;
-        } else {
-            break;
-        };
+    while let Some(record) = reader2.read_next() {
+        dbg!(&record);
+        assert_eq!(record.head, headers[seqs_read2].as_bytes());
+        assert_eq!(record.seq, seqs[seqs_read2].as_bytes());
+        assert_eq!(record.qual, None);
+        seqs_read2 += 1;
     }
     assert_eq!(seqs_read2, n_seqs);
 }
 
 #[test]
 fn test_figure_out_file_format() {
-    assert!(match figure_out_file_format("aa.fna") {
-        (FileType::FASTA, false) => true,
-        _ => false,
-    });
-    assert!(match figure_out_file_format("aa.fq") {
-        (FileType::FASTQ, false) => true,
-        _ => false,
-    });
-    assert!(match figure_out_file_format("bbb.fna.gz") {
-        (FileType::FASTA, true) => true,
-        _ => false,
-    });
-    assert!(match figure_out_file_format("cc.fna.gz") {
-        (FileType::FASTA, true) => true,
-        _ => false,
-    });
-    assert!(match figure_out_file_format(".fna.gz") {
-        (FileType::FASTA, true) => true,
-        _ => false,
-    });
-    assert!(match figure_out_file_format(".fasta") {
-        (FileType::FASTA, false) => true,
-        _ => false,
-    });
-    assert!(match figure_out_file_format(".fq") {
-        (FileType::FASTQ, false) => true,
-        _ => false,
-    });
+    assert!(matches!(figure_out_file_format("aa.fna"), (FileType::FASTA, false)));
+    assert!(matches!(figure_out_file_format("aa.fq"), (FileType::FASTQ, false)));
+    assert!(matches!(figure_out_file_format("bbb.fna.gz"), (FileType::FASTA, true)));
+    assert!(matches!(figure_out_file_format("cc.fna.gz"), (FileType::FASTA, true)));
+    assert!(matches!(figure_out_file_format(".fna.gz"), (FileType::FASTA, true)));
+    assert!(matches!(figure_out_file_format(".fasta"), (FileType::FASTA, false)));
+    assert!(matches!(figure_out_file_format(".fq"), (FileType::FASTQ, false)));
 }
 
 #[test]
@@ -209,7 +172,7 @@ fn test_into_db(){
     
     let mut reader2 = DynamicFastXReader::new_from_file(&String::from("tests/data/reads.fastq"));
 
-    let mut i = 0 as usize;
+    let mut i: usize = 0;
     while let Some(record) = reader2.read_next() {
         assert_eq!(record.head, db_records[i].head);
         assert_eq!(record.seq, db_records[i].seq);
