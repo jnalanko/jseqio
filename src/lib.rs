@@ -6,7 +6,7 @@ pub mod writer;
 pub mod record;
 pub mod seq_db;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum FileType{
     FASTA,
     FASTQ,

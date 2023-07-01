@@ -7,6 +7,7 @@ use crate::record::RefRecord;
 // Takes a BufRead because we need read_until.
 pub struct FastXReader<R: std::io::BufRead>{
     pub filetype: FileType,
+    pub filename: Option<String>, // Only used for error messages. If None, the file is unknown or there is no file, like when reading from stdin.
     pub input: R,
     pub seq_buf: Vec<u8>,
     pub head_buf: Vec<u8>,
@@ -25,9 +26,40 @@ trait SeqRecordProducer {
     fn into_db_boxed(self: Box<Self>) -> Result<crate::seq_db::SeqDB, Box<dyn std::error::Error>>;
 
     fn filetype(&self)-> FileType; 
+
+    fn set_filename(&mut self, filename: &str);
+}
+
+#[derive(Debug)]
+struct ParseError{
+    message: String,
+    filename: Option<String>,
+    filetype: FileType,
+}
+
+impl std::error::Error for ParseError{}
+
+impl std::fmt::Display for ParseError{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.filename {
+            Some(filename) => write!(f, "Error parsing file format {:?} from file {}: {}", self.filetype, filename, self.message),
+            None => write!(f, "Error parsing file format {:?}: {}", self.filetype, self.message),
+        }
+    }
 }
 
 impl<R: std::io::BufRead> FastXReader<R>{
+
+    fn build_parse_error(&self, message: &str) -> Box<ParseError>{
+        Box::new(
+            ParseError{
+                message: message.to_owned(), 
+                filename: self.filename.clone(), 
+                filetype: self.filetype
+            }
+        )
+    }
+
     pub fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>> {
         if matches!(self.filetype, FileType::FASTQ){
             // FASTQ format
@@ -44,21 +76,22 @@ impl<R: std::io::BufRead> FastXReader<R>{
             // Read sequence line
             let bytes_read = self.input.read_until(b'\n', &mut self.seq_buf)?;
             if bytes_read == 0 {
-                panic!("FASTQ sequence line missing."); // File can't end here
+                return Err(self.build_parse_error("FASTQ sequence line missing.")); // File can't end here
             }
             
             // read +-line
             let bytes_read = self.input.read_until(b'\n', &mut self.plus_buf)?;
             if bytes_read == 0 {
-                panic!("FASTQ + line missing."); // File can't end here
+                return Err(self.build_parse_error("FASTQ + line missing.")); // File can't end here
             }
 
             // read qual-line
             let bytes_read = self.input.read_until(b'\n', &mut self.qual_buf)?;
             if bytes_read == 0 { // File can't end here
-                panic!("FASTQ quality line missing."); 
+                return Err(self.build_parse_error("FASTQ quality line missing.")); // File can't end here
             } else if bytes_read != self.seq_buf.len(){
-                panic!("FASTQ quality line has different length than sequence line ({} vs {})", bytes_read, self.seq_buf.len())
+                let msg = format!("FASTQ quality line has different length than sequence line ({} vs {})", bytes_read, self.seq_buf.len());
+                return Err(self.build_parse_error(&msg));
             }
 
             Ok(Some(RefRecord{head: self.head_buf.as_slice().strip_prefix(b"@").unwrap().strip_suffix(b"\n").unwrap(), 
@@ -87,7 +120,7 @@ impl<R: std::io::BufRead> FastXReader<R>{
                     // No more bytes left to read
                     if self.seq_buf.is_empty(){
                         // Stream ends with an empty sequence
-                        panic!("Empty sequence in FASTA file"); // TODO
+                        return Err(self.build_parse_error("Empty sequence in FASTA file"));
                     }
                     break; // Ok, last record of the file
                 }
@@ -112,6 +145,7 @@ impl<R: std::io::BufRead> FastXReader<R>{
     pub fn new(input: R, filetype: FileType) -> Self{
         FastXReader{filetype,
                     input,
+                    filename: None,
                     seq_buf: Vec::<u8>::new(),
                     head_buf: Vec::<u8>::new(),
                     qual_buf: Vec::<u8>::new(),
@@ -171,7 +205,7 @@ impl DynamicFastXReader {
     pub fn new_from_file(filename: &String) -> Self {
         let input = File::open(filename).unwrap();
         let (fileformat, gzipped) = figure_out_file_format(filename.as_str());
-        if gzipped{
+        let mut reader = if gzipped{
 
             // The GzDecoder structs have internal buffering, so we can feed in an unbuffered File stream.
             let gzdecoder = MultiGzDecoder::<File>::new(input);
@@ -183,7 +217,9 @@ impl DynamicFastXReader {
 
         } else{
             Self::new_from_input_stream(BufReader::<File>::new(input), fileformat)
-        }
+        };
+        reader.stream.set_filename(filename);
+        reader
     }
 
     // New from stdin
@@ -232,6 +268,10 @@ impl<R: BufRead> SeqRecordProducer for FastXReader<R>{
 
     fn into_db_boxed(self: Box<Self>) -> Result<crate::seq_db::SeqDB, Box<dyn std::error::Error>>{
         self.into_db()
+    }
+
+    fn set_filename(&mut self, filename: &str){
+        self.filename = Some(filename.to_owned());
     }
 
 }
