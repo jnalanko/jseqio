@@ -2,7 +2,7 @@
 use std::io;
 use std::io::BufWriter;
 use std::io::Write;
-use std::fs::File;
+use ex::fs::File;
 use flate2::Compression;
 use flate2::write::GzEncoder;
 

@@ -1,4 +1,4 @@
-use std::fs::File;
+use ex::fs::File; // File streams that include the filename in the error messages
 use std::io::{BufRead, BufReader};
 use flate2::read::MultiGzDecoder;
 use crate::{FileType, figure_out_file_format};
