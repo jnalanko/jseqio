@@ -114,6 +114,35 @@ impl<R: std::io::BufRead> FastXReader<R>{
                     fasta_temp_buf: Vec::<u8>::new(),}
     }
 
+    pub fn into_db(mut self) -> crate::seq_db::SeqDB{
+        let mut headbuf: Vec<u8> = Vec::new();
+        let mut seqbuf: Vec<u8> = Vec::new();
+        let mut qualbuf: Option<Vec<u8>> = match self.filetype{
+            FileType::FASTQ => Some(Vec::new()),
+            FileType::FASTA => None,
+        };
+
+        let mut head_starts: Vec<usize> = vec![0];
+        let mut seq_starts: Vec<usize> = vec![0];
+        let mut qual_starts: Option<Vec<usize>> = match self.filetype{
+            FileType::FASTQ => Some(vec![0]),
+            FileType::FASTA => None,
+        };
+
+        while let Some(rec) = self.read_next(){
+            headbuf.extend_from_slice(rec.head);
+            seqbuf.extend_from_slice(rec.seq);
+            if let Some(qual) = rec.qual{
+                qualbuf.as_mut().expect("Error: found a fastq record in a fasta stream.").extend_from_slice(qual);
+                qual_starts.as_mut().unwrap().push(qualbuf.as_ref().unwrap().len());
+            }
+            head_starts.push(headbuf.len());
+            seq_starts.push(seqbuf.len());
+        }
+        crate::seq_db::SeqDB{headbuf, seqbuf, qualbuf, head_starts, seq_starts, qual_starts}
+    }
+
+
 
 }
 
@@ -121,9 +150,9 @@ impl<R: std::io::BufRead> FastXReader<R>{
 // Trait for a stream returning SeqRecord objects.
 pub trait SeqRecordProducer {
     fn read_next(&mut self) -> Option<RefRecord>;
-    fn into_db(self) -> crate::seq_db::SeqDB;
 
-    // For trait objects where we don't know the size of the struct
+    // Since we want to call this for trait objects where we don't know the size of the struct,
+    // We need to take self in a Box.
     fn into_db_boxed(self: Box<Self>) -> crate::seq_db::SeqDB;
 
     fn filetype(&self)-> FileType; 
@@ -205,34 +234,6 @@ impl<R: BufRead> SeqRecordProducer for FastXReader<R>{
 
     fn filetype(&self)-> FileType{
         self.filetype
-    }
-
-    fn into_db(mut self) -> crate::seq_db::SeqDB{
-        let mut headbuf: Vec<u8> = Vec::new();
-        let mut seqbuf: Vec<u8> = Vec::new();
-        let mut qualbuf: Option<Vec<u8>> = match self.filetype{
-            FileType::FASTQ => Some(Vec::new()),
-            FileType::FASTA => None,
-        };
-
-        let mut head_starts: Vec<usize> = vec![0];
-        let mut seq_starts: Vec<usize> = vec![0];
-        let mut qual_starts: Option<Vec<usize>> = match self.filetype{
-            FileType::FASTQ => Some(vec![0]),
-            FileType::FASTA => None,
-        };
-
-        while let Some(rec) = self.read_next(){
-            headbuf.extend_from_slice(rec.head);
-            seqbuf.extend_from_slice(rec.seq);
-            if let Some(qual) = rec.qual{
-                qualbuf.as_mut().expect("Error: found a fastq record in a fasta stream.").extend_from_slice(qual);
-                qual_starts.as_mut().unwrap().push(qualbuf.as_ref().unwrap().len());
-            }
-            head_starts.push(headbuf.len());
-            seq_starts.push(seqbuf.len());
-        }
-        crate::seq_db::SeqDB{headbuf, seqbuf, qualbuf, head_starts, seq_starts, qual_starts}
     }
 
     fn into_db_boxed(self: Box<Self>) -> crate::seq_db::SeqDB{
