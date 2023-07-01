@@ -31,20 +31,17 @@ trait SeqRecordProducer {
 }
 
 #[derive(Debug)]
-struct ParseError{
-    message: String,
-    filename: Option<String>,
-    filetype: FileType,
+pub struct ParseError{
+    pub message: String,
+    pub filename: Option<String>,
+    pub filetype: FileType,
 }
 
 impl std::error::Error for ParseError{}
 
 impl std::fmt::Display for ParseError{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self.filename {
-            Some(filename) => write!(f, "Error parsing file format {:?} from file {}: {}", self.filetype, filename, self.message),
-            None => write!(f, "Error parsing file format {:?}: {}", self.filetype, self.message),
-        }
+        write!(f, "{:?}", self)
     }
 }
 
@@ -72,6 +69,9 @@ impl<R: std::io::BufRead> FastXReader<R>{
             // Read header line
             let bytes_read = self.input.read_until(b'\n', &mut self.head_buf)?;
             if bytes_read == 0 {return Ok(None)} // End of stream
+            if self.head_buf[0] != b'@'{
+                return Err(self.build_parse_error("FASTQ header line does not start with @"));
+            }
 
             // Read sequence line
             let bytes_read = self.input.read_until(b'\n', &mut self.seq_buf)?;

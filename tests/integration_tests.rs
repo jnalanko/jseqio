@@ -164,6 +164,38 @@ fn test_figure_out_file_format() {
     assert!(matches!(figure_out_file_format(".fq"), (FileType::FASTQ, false)));
 }
 
+fn get_fastq_reader(data: &[u8]) -> DynamicFastXReader{
+    std::fs::write("/tmp/test.fastq", data).unwrap();
+    DynamicFastXReader::new_from_file(&String::from("/tmp/test.fastq"))
+}
+
+#[test]
+fn fastq_errors() {
+    // Not enough quality values
+    let reader = get_fastq_reader("@SRR403017.1 HWUSI-EAS108E_0007:3:1:3797:973/1\nACGT\n+\nIII\n".as_bytes());
+    assert!(reader.into_db().is_err_and(|e| e.is::<jseqio::reader::ParseError>()));
+
+    // Too many quality values
+    let reader = get_fastq_reader("@SRR403017.1 HWUSI-EAS108E_0007:3:1:3797:973/1\nACGT\n+\nIIIIIII\n".as_bytes());
+    assert!(reader.into_db().is_err_and(|e| e.is::<jseqio::reader::ParseError>()));
+
+    // Not quality line
+    let reader = get_fastq_reader("@SRR403017.1 HWUSI-EAS108E_0007:3:1:3797:973/1\nACGT\n+\n".as_bytes());
+    assert!(reader.into_db().is_err_and(|e| e.is::<jseqio::reader::ParseError>()));
+
+    // No plus line
+    let reader = get_fastq_reader("@SRR403017.1 HWUSI-EAS108E_0007:3:1:3797:973/1\nACGT\nIIII\n".as_bytes());
+    assert!(reader.into_db().is_err_and(|e| e.is::<jseqio::reader::ParseError>()));
+
+    // No sequence line
+    let reader = get_fastq_reader("@SRR403017.1 HWUSI-EAS108E_0007:3:1:3797:973/1\n+\nIIII\n".as_bytes());
+    assert!(reader.into_db().is_err_and(|e| e.is::<jseqio::reader::ParseError>()));
+
+    // No header
+    let reader = get_fastq_reader("\nACGT\n+\nIIII\n".as_bytes());
+    assert!(reader.into_db().is_err_and(|e| e.is::<jseqio::reader::ParseError>()));
+}
+
 #[test]
 fn test_into_db(){
     let reader1 = DynamicFastXReader::new_from_file(&String::from("tests/data/reads.fastq"));
