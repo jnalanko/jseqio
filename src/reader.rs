@@ -147,8 +147,9 @@ impl<R: std::io::BufRead> FastXReader<R>{
 }
 
 
-// Trait for a stream returning SeqRecord objects.
-pub trait SeqRecordProducer {
+// Trait for a stream returning SeqRecord objects, used in DynamicFastXReader to abstract over
+// The input stream type.
+trait SeqRecordProducer {
     fn read_next(&mut self) -> Option<RefRecord>;
 
     // Since we want to call this for trait objects where we don't know the size of the struct,
