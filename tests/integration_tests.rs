@@ -166,7 +166,7 @@ fn test_figure_out_file_format() {
 
 #[test]
 fn test_into_db(){
-    let mut reader1 = DynamicFastXReader::new_from_file(&String::from("tests/data/reads.fastq"));
+    let reader1 = DynamicFastXReader::new_from_file(&String::from("tests/data/reads.fastq"));
     let db = reader1.into_db();
     let db_records: Vec<RefRecord> = db.iter().collect();
     

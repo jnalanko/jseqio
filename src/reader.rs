@@ -121,7 +121,7 @@ impl<R: std::io::BufRead> FastXReader<R>{
 // Trait for a stream returning SeqRecord objects.
 pub trait SeqRecordProducer {
     fn read_next(&mut self) -> Option<RefRecord>;
-    fn into_db(&mut self) -> crate::seq_db::SeqDB; // Todo: could we move instead of borrowing?
+    fn into_db(self: Box<Self>) -> crate::seq_db::SeqDB;
     fn filetype(&self)-> FileType; 
 }
 
@@ -185,7 +185,7 @@ impl DynamicFastXReader {
         self.stream.filetype()
     }
 
-    pub fn into_db(&mut self) -> crate::seq_db::SeqDB{
+    pub fn into_db(self) -> crate::seq_db::SeqDB{
         self.stream.into_db()
     }
 
@@ -203,7 +203,7 @@ impl<R: BufRead> SeqRecordProducer for FastXReader<R>{
         self.filetype
     }
 
-    fn into_db(&mut self) -> crate::seq_db::SeqDB{
+    fn into_db(mut self: Box<Self>) -> crate::seq_db::SeqDB{
 
         let mut headbuf: Vec<u8> = Vec::new();
         let mut seqbuf: Vec<u8> = Vec::new();
