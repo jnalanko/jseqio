@@ -196,6 +196,8 @@ fn fastq_errors() {
     assert!(reader.into_db().is_err_and(|e| e.is::<jseqio::reader::ParseError>()));
 }
 
+// TODO: fasta errors
+
 #[test]
 fn test_into_db(){
     let reader1 = DynamicFastXReader::new_from_file(&String::from("tests/data/reads.fastq"));
