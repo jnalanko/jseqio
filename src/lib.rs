@@ -1,5 +1,5 @@
 
-use std::str;
+use std::{str, path::Path};
 
 pub mod reader;
 pub mod writer;
@@ -13,7 +13,9 @@ pub enum FileType{
 }
 
 // Returns (file type, is_gzipped)
-pub fn figure_out_file_format(filename: &str) -> (FileType, bool){
+pub fn figure_out_file_format<P: AsRef<Path>>(filepath: P) -> (FileType, bool){
+    let filename = filepath.as_ref().as_os_str().to_str().unwrap();
+
     let is_gzipped = filename.ends_with(".gz");
     let filename = if is_gzipped{
         &filename[0 .. filename.len()-3] // Drop the .gz suffix

@@ -1,5 +1,6 @@
 use ex::fs::File; // File streams that include the filename in the error messages
 use std::io::{BufRead, BufReader};
+use std::path::Path;
 use flate2::read::MultiGzDecoder;
 use crate::{FileType, figure_out_file_format};
 use crate::record::RefRecord;
@@ -27,7 +28,8 @@ trait SeqRecordProducer {
 
     fn filetype(&self)-> FileType; 
 
-    fn set_filename(&mut self, filename: &str);
+    // For error messages
+    fn set_filepath(&mut self, filepath: &Path);
 }
 
 #[derive(Debug)]
@@ -202,9 +204,9 @@ impl DynamicFastXReader {
     }
 
     // New from file
-    pub fn new_from_file(filename: &String) -> Self {
-        let input = File::open(filename).unwrap();
-        let (fileformat, gzipped) = figure_out_file_format(filename.as_str());
+    pub fn new_from_file<P: AsRef<std::path::Path>>(filepath: &P) -> Self {
+        let input = File::open(filepath).unwrap();
+        let (fileformat, gzipped) = figure_out_file_format(filepath);
         let mut reader = if gzipped{
 
             // The GzDecoder structs have internal buffering, so we can feed in an unbuffered File stream.
@@ -218,7 +220,7 @@ impl DynamicFastXReader {
         } else{
             Self::new_from_input_stream(BufReader::<File>::new(input), fileformat)
         };
-        reader.stream.set_filename(filename);
+        reader.stream.set_filepath(filepath.as_ref());
         reader
     }
 
@@ -270,8 +272,8 @@ impl<R: BufRead> SeqRecordProducer for FastXReader<R>{
         self.into_db()
     }
 
-    fn set_filename(&mut self, filename: &str){
-        self.filename = Some(filename.to_owned());
+    fn set_filepath(&mut self, filepath: &Path){
+        self.filename = Some(filepath.as_os_str().to_str().unwrap().to_owned());
     }
 
 }
