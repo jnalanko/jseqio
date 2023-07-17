@@ -9,3 +9,4 @@
 // Take in the correct strings types, not std::String always
 // Empty file should work
 // By default always write in same format as reading
+// Derive all the commonly needed traits like Debug etc
