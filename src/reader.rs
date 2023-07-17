@@ -36,7 +36,7 @@ trait SeqRecordProducer {
 pub struct ParseError{
     pub message: String,
     pub filename: Option<String>,
-    pub filetype: FileType,
+    pub filetype: Option<FileType>,
 }
 
 impl std::error::Error for ParseError{}
@@ -54,7 +54,7 @@ impl<R: std::io::BufRead> FastXReader<R>{
             ParseError{
                 message: message.to_owned(), 
                 filename: self.filename.clone(), 
-                filetype: self.filetype
+                filetype: Some(self.filetype)
             }
         )
     }
@@ -153,6 +153,34 @@ impl<R: std::io::BufRead> FastXReader<R>{
                     qual_buf: Vec::<u8>::new(),
                     plus_buf: Vec::<u8>::new(),
                     fasta_temp_buf: Vec::<u8>::new(),}
+    }
+
+    pub fn new_detect_format(mut input: R) -> Result<Self, Box<dyn std::error::Error>>{
+        let bytes = input.fill_buf()?;
+
+        // Empty file is arbitrarily considered as FASTA
+        let mut filetype = FileType::FASTA;
+
+        if !bytes.is_empty(){
+            filetype = match bytes[0]{
+                b'>' => FileType::FASTA,
+                b'@' => FileType::FASTQ,
+                _ => return Err(
+                        Box::new(ParseError{message: "Error: File does not start with '>' or '@'".to_owned(), 
+                        filename: None, 
+                        filetype: None}))
+            } 
+        }
+
+        Ok(FastXReader{filetype,
+            input,
+            filename: None,
+            seq_buf: Vec::<u8>::new(),
+            head_buf: Vec::<u8>::new(),
+            qual_buf: Vec::<u8>::new(),
+            plus_buf: Vec::<u8>::new(),
+            fasta_temp_buf: Vec::<u8>::new()})
+
     }
 
     pub fn into_db(mut self) -> Result<crate::seq_db::SeqDB, Box<dyn std::error::Error>>{
