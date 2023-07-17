@@ -226,15 +226,15 @@ impl DynamicFastXReader {
  
     // Need to constrain + 'static because boxed things always need to have a static
     // lifetime.
-    pub fn new_from_input_stream<R: std::io::BufRead + 'static>(r: R, filetype: FileType) -> Self{
-        let reader = FastXReader::<R>::new(r, filetype);
-        DynamicFastXReader {stream: Box::new(reader)}
+    pub fn new_from_input_stream<R: std::io::BufRead + 'static>(r: R) -> Result<Self, Box<dyn std::error::Error>>{
+        let reader = FastXReader::<R>::new_detect_format(r)?; // Todo: throw error
+        Ok(DynamicFastXReader {stream: Box::new(reader)})
     }
 
     // New from file
-    pub fn new_from_file<P: AsRef<std::path::Path>>(filepath: &P) -> Self {
+    pub fn new_from_file<P: AsRef<std::path::Path>>(filepath: &P) -> Result<Self, Box<dyn std::error::Error>> {
         let input = File::open(filepath).unwrap();
-        let (fileformat, gzipped) = figure_out_file_format(filepath);
+        let (_, gzipped) = figure_out_file_format(filepath);
         let mut reader = if gzipped{
 
             // The GzDecoder structs have internal buffering, so we can feed in an unbuffered File stream.
@@ -243,17 +243,17 @@ impl DynamicFastXReader {
             // We wrap this in BufReader because the FastX parser requires buffered reading
             let gzdecoder = BufReader::<MultiGzDecoder::<File>>::new(gzdecoder);
 
-            Self::new_from_input_stream(gzdecoder, fileformat)
+            Self::new_from_input_stream(gzdecoder)?
 
         } else{
-            Self::new_from_input_stream(BufReader::<File>::new(input), fileformat)
+            Self::new_from_input_stream(BufReader::<File>::new(input))?
         };
         reader.stream.set_filepath(filepath.as_ref());
-        reader
+        Ok(reader)
     }
 
     // New from stdin
-    pub fn new_from_stdin(filetype: FileType, gzipped: bool) -> Self {
+    pub fn new_from_stdin(gzipped: bool) -> Result<Self, Box<dyn std::error::Error>> {
         let input = std::io::stdin();
         if gzipped {
 
@@ -263,9 +263,9 @@ impl DynamicFastXReader {
             // We wrap this in BufReader because the FastX parser requires buffered reading
             let gzdecoder = BufReader::<MultiGzDecoder::<std::io::Stdin>>::new(gzdecoder);
 
-            Self::new_from_input_stream(gzdecoder, filetype)
+            Self::new_from_input_stream(gzdecoder)
         } else {
-            Self::new_from_input_stream(BufReader::<std::io::Stdin>::new(input), filetype)
+            Self::new_from_input_stream(BufReader::<std::io::Stdin>::new(input))
         }
     }
 
