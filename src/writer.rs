@@ -43,9 +43,9 @@ impl DynamicFastXWriter{
     }
 
     // Write to a file
-    pub fn new_to_file(filename: &String) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new_to_file<P: AsRef<std::path::Path>>(filename: &P) -> Result<Self, Box<dyn std::error::Error>> {
         let output = File::create(filename)?;
-        match figure_out_file_format(filename.as_str()){
+        match figure_out_file_format(filename){
             (FileType::FASTQ, true) =>{
                 let gzencoder = GzEncoder::<File>::new(output, Compression::fast());
                 Ok(Self::new_to_stream(gzencoder, FileType::FASTQ))
