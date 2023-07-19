@@ -227,7 +227,7 @@ impl DynamicFastXReader {
     // Need to constrain + 'static because boxed things always need to have a static
     // lifetime.
     pub fn new_from_input_stream<R: std::io::BufRead + 'static>(r: R) -> Result<Self, Box<dyn std::error::Error>>{
-        let reader = FastXReader::<R>::new_detect_format(r)?; // Todo: throw error
+        let reader = FastXReader::<R>::new_detect_format(r)?;
         Ok(DynamicFastXReader {stream: Box::new(reader)})
     }
 
