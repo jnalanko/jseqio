@@ -1,3 +1,5 @@
+use std::fs::File;
+use std::io::BufWriter;
 // Unit tests
 #[cfg(test)]
 use std::io::{BufReader};
@@ -248,3 +250,20 @@ fn test_empty_file() {
     let db = reader.into_db().unwrap(); // Should not panic
     assert_eq!(db.iter().count(), 0);
 }
+
+#[test]
+fn test_flush_on_drop(){
+    let bw = BufWriter::new(File::create("/tmp/test.fna").unwrap());
+    let mut writer = FastXWriter::<BufWriter<File>>::new(bw, FileType::FASTA);
+    let rec = OwnedRecord{head: b"header".to_vec(), seq: b"ACGT".to_vec(), qual: None};
+    writer.write(&rec);
+
+    drop(writer);
+
+    // Try to read the record back
+    let mut reader = FastXReader::new(BufReader::new(File::open("/tmp/test.fna").unwrap()), FileType::FASTA);
+    let rec = reader.read_next().unwrap().unwrap();
+    assert_eq!(rec.head, b"header");
+    assert_eq!(rec.seq, b"ACGT");
+    assert!(rec.qual.is_none());
+ }
