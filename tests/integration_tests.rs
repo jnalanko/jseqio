@@ -225,3 +225,26 @@ fn test_into_db(){
 
     assert_eq!(db_records, db2_records);
 }
+
+#[test]
+fn test_empty_file() {
+    let data = b"";
+
+    // Dynamic reader
+    let bufreader = BufReader::new(data.as_slice());
+    let reader = DynamicFastXReader::new_from_input_stream(bufreader).unwrap();
+    let db = reader.into_db().unwrap(); // Should not panic
+    assert_eq!(db.iter().count(), 0);
+
+    // non-dynamic FASTA reader
+    let bufreader = BufReader::new(data.as_slice());
+    let reader = FastXReader::new(bufreader, FileType::FASTA);
+    let db = reader.into_db().unwrap(); // Should not panic
+    assert_eq!(db.iter().count(), 0);
+
+    // non-dynamic FASTQ reader
+    let bufreader = BufReader::new(data.as_slice());
+    let reader = FastXReader::new(bufreader, FileType::FASTQ);
+    let db = reader.into_db().unwrap(); // Should not panic
+    assert_eq!(db.iter().count(), 0);
+}
