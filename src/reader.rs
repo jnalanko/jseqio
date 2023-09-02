@@ -234,43 +234,19 @@ impl DynamicFastXReader {
     // New from file
     pub fn new_from_file<P: AsRef<std::path::Path>>(filepath: &P) -> Result<Self, Box<dyn std::error::Error>> {
         let input = File::open(filepath).unwrap();
-        let (_, gzipped) = figure_out_file_format(filepath);
-        let mut reader = if gzipped{
-
-            // The GzDecoder structs have internal buffering, so we can feed in an unbuffered File stream.
-            let gzdecoder = MultiGzDecoder::<File>::new(input);
-
-            // We wrap this in BufReader because the FastX parser requires buffered reading
-            let gzdecoder = BufReader::<MultiGzDecoder::<File>>::new(gzdecoder);
-
-            Self::new_from_input_stream(gzdecoder)?
-
-        } else{
-            Self::new_from_input_stream(BufReader::<File>::new(input))?
-        };
+        let mut reader = Self::new_from_input_stream_with_gzip_detection(BufReader::new(input))?;
         reader.stream.set_filepath(filepath.as_ref());
         Ok(reader)
     }
 
     // New from stdin
-    pub fn new_from_stdin(gzipped: bool) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new_from_stdin() -> Result<Self, Box<dyn std::error::Error>> {
         let input = std::io::stdin();
-        if gzipped {
-
-            // The GzDecoder structs have internal buffering, so we can feed in an unbuffered stdin stream.
-            let gzdecoder = MultiGzDecoder::<std::io::Stdin>::new(input);
-
-            // We wrap this in BufReader because the FastX parser requires buffered reading
-            let gzdecoder = BufReader::<MultiGzDecoder::<std::io::Stdin>>::new(gzdecoder);
-
-            Self::new_from_input_stream(gzdecoder)
-        } else {
-            Self::new_from_input_stream(BufReader::<std::io::Stdin>::new(input))
-        }
+        let reader = Self::new_from_input_stream_with_gzip_detection(BufReader::new(input))?;
+        Ok(reader)
     }
 
-
-    pub fn new_with_gzip_auto_detection<R: std::io::BufRead + 'static>(mut input: R) -> Result<Self, Box<dyn std::error::Error>>{
+    pub fn new_from_input_stream_with_gzip_detection<R: std::io::BufRead + 'static>(mut input: R) -> Result<Self, Box<dyn std::error::Error>>{
         let bytes = input.fill_buf()?;
         let mut gzipped = false;
         match bytes.len(){

@@ -193,7 +193,7 @@ fn gzip_auto_detection(){
     for filename in get_test_filenames(){
         eprintln!("{}", filename);
         let input = BufReader::new(File::open(filename).unwrap());
-        let reader = DynamicFastXReader::new_with_gzip_auto_detection(input).unwrap();
+        let reader = DynamicFastXReader::new_from_input_stream_with_gzip_detection(input).unwrap();
         let db = reader.into_db().unwrap();
         let seqs = db.iter().map(|r| r.seq.to_owned()).collect::<Vec<Vec<u8>>>();
         assert_eq!(true_seqs, seqs);
