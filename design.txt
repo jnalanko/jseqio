@@ -10,3 +10,8 @@
 // Empty file should work
 // By default always write in same format as reading
 // Derive all the commonly needed traits like Debug etc
+
+// Is this 'static necessary?
+    // Need to constrain + 'static because boxed things always need to have a static
+    // lifetime.
+    pub fn new_from_input_stream<R: std::io::BufRead + 'static>(r: R) -> Result<Self, Box<dyn std::error::Error>>{

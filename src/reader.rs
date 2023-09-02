@@ -269,6 +269,36 @@ impl DynamicFastXReader {
         }
     }
 
+
+    pub fn new_with_gzip_auto_detection<R: std::io::BufRead + 'static>(mut input: R) -> Result<Self, Box<dyn std::error::Error>>{
+        let bytes = input.fill_buf()?;
+        let mut gzipped = false;
+        match bytes.len(){
+            0 => (), // Empty file
+            1 => return Err(Box::new(ParseError{message: "Corrupt FASTA/FASTQ file: only one byte found.".to_owned(), 
+                        filename: None, 
+                        filetype: None})),
+            _ => { // Two or more bytes available. Check if the first two are a valid gzip header.
+                if bytes[0] == 0x1f && bytes[1] == 0x8b{ 
+                    gzipped = true;
+                }
+            }
+        }
+
+        match gzipped{
+            true => {
+                let gzdecoder = MultiGzDecoder::<R>::new(input);
+
+                // We wrap this in BufReader because the FastX parser requires buffered reading
+                let gzbufdecoder = BufReader::<MultiGzDecoder::<R>>::new(gzdecoder);
+                Self::new_from_input_stream(gzbufdecoder)?
+            },
+            false => Self::new_from_input_stream(input)?
+        };
+        todo!();
+    }
+
+
     // Returns None if no more records
     pub fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>{
         self.stream.read_next()
