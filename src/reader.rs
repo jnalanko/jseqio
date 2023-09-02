@@ -291,11 +291,10 @@ impl DynamicFastXReader {
 
                 // We wrap this in BufReader because the FastX parser requires buffered reading
                 let gzbufdecoder = BufReader::<MultiGzDecoder::<R>>::new(gzdecoder);
-                Self::new_from_input_stream(gzbufdecoder)?
+                Self::new_from_input_stream(gzbufdecoder)
             },
-            false => Self::new_from_input_stream(input)?
-        };
-        todo!();
+            false => Self::new_from_input_stream(input)
+        }
     }
 
 

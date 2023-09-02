@@ -9,6 +9,11 @@ use jseqio::record::*;
 use jseqio::writer::*;
 use jseqio::*;
 
+// Utility function
+fn get_test_filenames() -> Vec<&'static str>{
+    vec!["tests/data/reads.fastq", "tests/data/reads.fna", "tests/data/reads.fastq.gz", "tests/data/reads.fasta.gz"]
+}
+
 #[test]
 fn fastq() {
     let headers = vec![
@@ -166,9 +171,33 @@ fn test_figure_out_file_format() {
     assert!(matches!(figure_out_file_format(".fq"), (FileType::FASTQ, false)));
 }
 
+// Utility function
 fn get_test_reader(data: &[u8]) -> Result<DynamicFastXReader, Box<dyn std::error::Error>>{
     std::fs::write("/tmp/test.fastq", data).unwrap();
     DynamicFastXReader::new_from_file(&String::from("/tmp/test.fastq"))
+}
+
+// Utility function
+fn get_sequences(filename: &str) -> Vec<Vec<u8>>{
+    let reader = DynamicFastXReader::new_from_file(&String::from(filename)).unwrap();
+    let db = reader.into_db().unwrap();
+    let db_records: Vec<RefRecord> = db.iter().collect();
+    let seqs: Vec<Vec<u8>> = db_records.iter().map(|r| r.seq.to_owned()).collect();
+    return seqs;
+}
+
+#[test]
+fn gzip_auto_detection(){
+    let true_seqs = get_sequences("tests/data/reads.fastq");
+
+    for filename in get_test_filenames(){
+        eprintln!("{}", filename);
+        let input = BufReader::new(File::open(filename).unwrap());
+        let reader = DynamicFastXReader::new_with_gzip_auto_detection(input).unwrap();
+        let db = reader.into_db().unwrap();
+        let seqs = db.iter().map(|r| r.seq.to_owned()).collect::<Vec<Vec<u8>>>();
+        assert_eq!(true_seqs, seqs);
+    }
 }
 
 #[test]
