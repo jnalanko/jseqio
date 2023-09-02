@@ -2,7 +2,7 @@ use ex::fs::File; // File streams that include the filename in the error message
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use flate2::read::MultiGzDecoder;
-use crate::{FileType, figure_out_file_format};
+use crate::{FileType};
 use crate::record::RefRecord;
 
 // Takes a BufRead because we need read_until.
