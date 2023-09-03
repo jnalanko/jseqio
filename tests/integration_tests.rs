@@ -174,12 +174,12 @@ fn test_figure_out_file_format() {
 // Utility function
 fn get_test_reader(data: &[u8]) -> Result<DynamicFastXReader, Box<dyn std::error::Error>>{
     std::fs::write("/tmp/test.fastq", data).unwrap();
-    DynamicFastXReader::new_from_file(&String::from("/tmp/test.fastq"))
+    DynamicFastXReader::from_file(&String::from("/tmp/test.fastq"))
 }
 
 // Utility function
 fn get_sequences(filename: &str) -> Vec<Vec<u8>>{
-    let reader = DynamicFastXReader::new_from_file(&String::from(filename)).unwrap();
+    let reader = DynamicFastXReader::from_file(&String::from(filename)).unwrap();
     let db = reader.into_db().unwrap();
     let db_records: Vec<RefRecord> = db.iter().collect();
     let seqs: Vec<Vec<u8>> = db_records.iter().map(|r| r.seq.to_owned()).collect();
@@ -193,7 +193,7 @@ fn gzip_auto_detection(){
     for filename in get_test_filenames(){
         eprintln!("{}", filename);
         let input = BufReader::new(File::open(filename).unwrap());
-        let reader = DynamicFastXReader::new_from_input_stream_with_gzip_detection(input).unwrap();
+        let reader = DynamicFastXReader::new(input).unwrap();
         let db = reader.into_db().unwrap();
         let seqs = db.iter().map(|r| r.seq.to_owned()).collect::<Vec<Vec<u8>>>();
         assert_eq!(true_seqs, seqs);
@@ -232,11 +232,11 @@ fn fastq_errors() {
 
 #[test]
 fn test_into_db(){
-    let reader1 = DynamicFastXReader::new_from_file(&String::from("tests/data/reads.fastq")).unwrap();
+    let reader1 = DynamicFastXReader::from_file(&String::from("tests/data/reads.fastq")).unwrap();
     let db = reader1.into_db().unwrap();
     let db_records: Vec<RefRecord> = db.iter().collect();
     
-    let mut reader2 = DynamicFastXReader::new_from_file(&String::from("tests/data/reads.fastq")).unwrap();
+    let mut reader2 = DynamicFastXReader::from_file(&String::from("tests/data/reads.fastq")).unwrap();
 
     let mut i: usize = 0;
     while let Some(record) = reader2.read_next().unwrap() {
@@ -263,7 +263,7 @@ fn test_empty_file() {
 
     // Dynamic reader
     let bufreader = BufReader::new(data.as_slice());
-    let reader = DynamicFastXReader::new_from_input_stream(bufreader).unwrap();
+    let reader = DynamicFastXReader::new(bufreader).unwrap();
     let db = reader.into_db().unwrap(); // Should not panic
     assert_eq!(db.iter().count(), 0);
 

@@ -37,7 +37,7 @@ impl DynamicFastXWriter{
 
     // No need to give a buffered writer. Buffering is handled internally.
     // If a buffered writer is given, then it will be buffered twice.
-    pub fn new_to_stream<W: Write + 'static>(stream: W, filetype: FileType) -> Self{
+    pub fn new<W: Write + 'static>(stream: W, filetype: FileType) -> Self{
         let writer = FastXWriter::<W>::new(stream, filetype);
         DynamicFastXWriter {stream: Box::new(writer)}
     }
@@ -48,26 +48,26 @@ impl DynamicFastXWriter{
         match figure_out_file_format(filename){
             (FileType::FASTQ, true) =>{
                 let gzencoder = GzEncoder::<File>::new(output, Compression::fast());
-                Ok(Self::new_to_stream(gzencoder, FileType::FASTQ))
+                Ok(Self::new(gzencoder, FileType::FASTQ))
             },
             (FileType::FASTQ, false) => {
-                Ok(Self::new_to_stream(output, FileType::FASTQ))
+                Ok(Self::new(output, FileType::FASTQ))
             },
             (FileType::FASTA, true) => {
                 let gzencoder = GzEncoder::<File>::new(output, Compression::fast());
-                Ok(Self::new_to_stream(gzencoder, FileType::FASTA))
+                Ok(Self::new(gzencoder, FileType::FASTA))
             },
             (FileType::FASTA, false) => {
-                Ok(Self::new_to_stream(output, FileType::FASTA))
+                Ok(Self::new(output, FileType::FASTA))
             },
         }
     }
 
     pub fn new_to_stdout(filetype: FileType, gzipped: bool) -> Self {
         if gzipped {
-            Self::new_to_stream(GzEncoder::new(io::stdout(), Compression::fast()), filetype)
+            Self::new(GzEncoder::new(io::stdout(), Compression::fast()), filetype)
         } else {
-            Self::new_to_stream(io::stdout(), filetype)
+            Self::new(io::stdout(), filetype)
         }
     }
 
