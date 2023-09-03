@@ -21,7 +21,7 @@
 //! 
 //! Since the readers stream over the data, we can not implement the Rust Iterator trait. The lifetime constraints
 //! on Rust Iterators require that all elements are valid until the end of the iteration. To support iterators,
-//! we provide the [seq_db::SeqDB] struct that concatenates all sequences, header and quality values in memory and provides 
+//! we provide the [seq_db::SeqDB] struct that concatenates all sequences, headers and quality values in memory and provides 
 //! an iterator over them.
 //! 
 //! # Examples
