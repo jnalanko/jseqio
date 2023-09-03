@@ -17,7 +17,7 @@ pub struct StaticFastXReader<R: std::io::BufRead>{
     pub fasta_temp_buf: Vec<u8>, // Stores the fasta header read in the previous iteration
 }
 
-// Trait for a stream returning SeqRecord objects, used in DynamicFastXReader to abstract over
+// Trait for a stream returning RefRecord objects, used in DynamicFastXReader to abstract over
 // The input stream type.
 trait SeqRecordProducer {
     fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>;
@@ -291,7 +291,7 @@ impl DynamicFastXReader {
 
 }
 
-// Implement common SeqStream trait for all
+// Implement common SeqRecordProducer trait for all
 // FastXReaders over the generic parameter R.
 impl<R: BufRead> SeqRecordProducer for StaticFastXReader<R>{
 
