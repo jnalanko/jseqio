@@ -144,7 +144,7 @@ impl<R: std::io::BufRead> FastXReader<R>{
         }
     }
 
-    // New with know format
+    // New with known format
     fn new_with_format(input: R, filetype: FileType) -> Self{
         FastXReader{filetype,
                     input,
