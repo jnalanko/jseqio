@@ -6,11 +6,12 @@
 //! which are often compressed with gzip. This makes a total of four formats: FASTA with
 //! and without gzip, and FASTQ with and without gzip. The purpose of the crate is to provide
 //! a parser that can automatically detect the format of the file and parse it without
-//! the user having to know beforehand which format the file is in.
+//! the user having to know beforehand which format is being used. **The file format is detected
+//! from the first two bytes of the file, and does not depend on the file extension**.
 //! 
 //! We use dynamic dispatch to hide the details of the file format from the user. This introduces
 //! an overhead of one dynamic dispatch per sequence, which is likely negligible unless the sequences
-//! are extremely short. This also allows up to support reading from any byte stream, such as the standard
+//! are extremely short. This also allows us to support reading from any byte stream, such as the standard
 //! input, without having to attach generic parameters onto the parser. The interface is implemented for 
 //! the struct [reader::DynamicFastXReader]. There is also [reader::StaticFastXReader] that takes the input
 //! stream as a generic parameter.
@@ -18,15 +19,21 @@
 //! A sequence is represented with a [record::RefRecord] struct that points to slices in the internal buffers of the reader. 
 //! This is to avoid allocating new memory for each sequence. There also exists [record::OwnedRecord] which owns the memory.
 //! 
+//! Since the readers stream over the data, we can not implement the Rust Iterator trait. The lifetime constraints
+//! on Rust Iterators require that all elements are valid until the end of the iteration. To support iterators,
+//! we provide the [seq_db::SeqDB] struct that concatenates all sequences, header and quality values in memory and provides 
+//! an iterator over them.
 //! 
 //! # Examples
 //! 
-//! ## Printing all sequences in a file.
+//! ## Streaming all sequences in a file and printing them to the standard output.
 //! 
 //! ```
 //! use jseqio::reader::DynamicFastXReader;
 //! fn main() -> Result<(), Box<dyn std::error::Error>>{
-//!     let mut reader = DynamicFastXReader::from_file(&"sequences.fastq")?; // Works for FASTA as well.
+//!     // Reading from a FASTQ file. Also works for FASTA,
+//!     // and seamlessly with/without gzip compression.
+//!     let mut reader = DynamicFastXReader::from_file(&"tests/data/reads.fastq.gz")?;
 //!     while let Some(rec) = reader.read_next().unwrap() {
 //!         // Headers do not include the leading '>' in FASTA or '@' in FASTQ.
 //!         eprintln!("Header: {}", std::str::from_utf8(rec.head)?);
@@ -40,7 +47,19 @@
 //! }
 //! ```
 //! 
-//! ## Iterating over sequences in memory
+//! ## Loading sequences into memory and computing the total length using an iterator.
+//! 
+//! ```
+//! use jseqio::reader::DynamicFastXReader;
+//! fn main() -> Result<(), Box<dyn std::error::Error>>{
+//!     let reader = DynamicFastXReader::from_file(&"tests/data/reads.fna")?;
+//!     let db = reader.into_db()?;
+//!     let total_length = db.iter().fold(0_usize, |sum, rec| sum + rec.seq.len());
+//!     eprintln!("Total sequence length: {}", total_length);
+//!     Ok(())
+//! }
+//! ```
+//! 
 
 use std::path::Path;
 
