@@ -1,4 +1,47 @@
 
+//! This crate provides parsers for sequences in FASTA and FASTQ format.
+//! 
+//! # Libary design
+//! In bioinformatics, sequences are usually stored in files in FASTA or FASTQ format,
+//! which are often compressed with gzip. This makes a total of four formats: FASTA with
+//! and without gzip, and FASTQ with and without gzip. The purpose of the crate is to provide
+//! a parser that can automatically detect the format of the file and parse it without
+//! the user having to know beforehand which format the file is in.
+//! 
+//! We use dynamic dispatch to hide the details of the file format from the user. This introduces
+//! an overhead of one dynamic dispatch per sequence, which is likely negligible unless the sequences
+//! are extremely short. This also allows up to support reading from any byte stream, such as the standard
+//! input, without having to attach generic parameters onto the parser. The interface is implemented for 
+//! the struct [reader::DynamicFastXReader]. There is also [reader::StaticFastXReader] that takes the input
+//! stream as a generic parameter.
+//! 
+//! A sequence is represented with a [record::RefRecord] struct that points to slices in the internal buffers of the reader. 
+//! This is to avoid allocating new memory for each sequence. There also exists [record::OwnedRecord] which owns the memory.
+//! 
+//! 
+//! # Examples
+//! 
+//! ## Printing all sequences in a file.
+//! 
+//! ```
+//! use jseqio::reader::DynamicFastXReader;
+//! fn main() -> Result<(), Box<dyn std::error::Error>>{
+//!     let mut reader = DynamicFastXReader::from_file(&"sequences.fastq")?; // Works for FASTA as well.
+//!     while let Some(rec) = reader.read_next().unwrap() {
+//!         // Headers do not include the leading '>' in FASTA or '@' in FASTQ.
+//!         eprintln!("Header: {}", std::str::from_utf8(rec.head)?);
+//!         eprintln!("Sequence: {}", std::str::from_utf8(rec.seq)?);
+//!         if let Some(qual) = rec.qual{
+//!             // Quality values are present only in fastq files.
+//!             eprintln!("Quality values: {}", std::str::from_utf8(qual)?);
+//!         }
+//!     }
+//!     Ok(())
+//! }
+//! ```
+//! 
+//! ## Iterating over sequences in memory
+
 use std::path::Path;
 
 pub mod reader;
