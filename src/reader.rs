@@ -224,28 +224,23 @@ pub struct DynamicFastXReader {
 // types of input streams.
 impl DynamicFastXReader {
  
-    // Need to constrain + 'static because boxed trait objects always need to have a static lifetime.
-    pub fn new_from_input_stream<R: std::io::BufRead + 'static>(r: R) -> Result<Self, Box<dyn std::error::Error>>{
-        let reader = FastXReader::<R>::new_detect_format(r)?;
-        Ok(DynamicFastXReader {stream: Box::new(reader)})
-    }
-
     // New from file
-    pub fn new_from_file<P: AsRef<std::path::Path>>(filepath: &P) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn from_file<P: AsRef<std::path::Path>>(filepath: &P) -> Result<Self, Box<dyn std::error::Error>> {
         let input = File::open(filepath).unwrap();
-        let mut reader = Self::new_from_input_stream_with_gzip_detection(BufReader::new(input))?;
+        let mut reader = Self::new(BufReader::new(input))?;
         reader.stream.set_filepath(filepath.as_ref());
         Ok(reader)
     }
 
     // New from stdin
-    pub fn new_from_stdin() -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn from_stdin() -> Result<Self, Box<dyn std::error::Error>> {
         let input = std::io::stdin();
-        let reader = Self::new_from_input_stream_with_gzip_detection(BufReader::new(input))?;
+        let reader = Self::new(BufReader::new(input))?;
         Ok(reader)
     }
 
-    pub fn new_from_input_stream_with_gzip_detection<R: std::io::BufRead + 'static>(mut input: R) -> Result<Self, Box<dyn std::error::Error>>{
+    // New from stream, with automatic gzip detection
+    pub fn new<R: std::io::BufRead + 'static>(mut input: R) -> Result<Self, Box<dyn std::error::Error>>{
         let bytes = input.fill_buf()?;
         let mut gzipped = false;
         match bytes.len(){
@@ -266,12 +261,18 @@ impl DynamicFastXReader {
 
                 // We wrap this in BufReader because the FastX parser requires buffered reading
                 let gzbufdecoder = BufReader::<MultiGzDecoder::<R>>::new(gzdecoder);
-                Self::new_from_input_stream(gzbufdecoder)
+                Self::from_raw_stream(gzbufdecoder)
             },
-            false => Self::new_from_input_stream(input)
+            false => Self::from_raw_stream(input)
         }
     }
 
+    // Creates a reader from a raw stream of uncompressed data (no gzip detection). Used by other constructors.
+    // Need to constrain + 'static because boxed trait objects always need to have a static lifetime.
+    fn from_raw_stream<R: std::io::BufRead + 'static>(r: R) -> Result<Self, Box<dyn std::error::Error>>{
+        let reader = FastXReader::<R>::new_detect_format(r)?;
+        Ok(DynamicFastXReader {stream: Box::new(reader)})
+    }
 
     // Returns None if no more records
     pub fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>{
