@@ -42,7 +42,7 @@ fn fastq() {
     }
 
     let input = BufReader::new(fastq_data.as_bytes());
-    let mut reader = FastXReader::new(input).unwrap();
+    let mut reader = StaticFastXReader::new(input).unwrap();
 
     let mut owned_records: Vec<OwnedRecord> = vec![];
     let mut seqs_read = 0;
@@ -68,7 +68,7 @@ fn fastq() {
 
     // Read the records back from written data and compare to originals.
 
-    let mut reader2 = FastXReader::new(written_data.as_slice()).unwrap();
+    let mut reader2 = StaticFastXReader::new(written_data.as_slice()).unwrap();
     let mut seqs_read2 = 0;
     while let Some(record) = reader2.read_next().unwrap() {
         dbg!(&record);
@@ -119,7 +119,7 @@ fn fasta() {
     dbg!(&fasta_data);
 
     let input = BufReader::new(fasta_data.as_bytes());
-    let mut reader = FastXReader::new(input).unwrap();
+    let mut reader = StaticFastXReader::new(input).unwrap();
 
     let mut owned_records: Vec<OwnedRecord> = vec![];
     let mut seqs_read = 0;
@@ -148,7 +148,7 @@ fn fasta() {
     // because the length of FASTA sequence lines is not fixed.
     // Read the records back from written data and compare to originals.
 
-    let mut reader2 = FastXReader::new(written_data.as_slice()).unwrap();
+    let mut reader2 = StaticFastXReader::new(written_data.as_slice()).unwrap();
     let mut seqs_read2 = 0;
     while let Some(record) = reader2.read_next().unwrap() {
         dbg!(&record);
@@ -249,7 +249,7 @@ fn test_into_db(){
     assert_eq!(i, db_records.len()); // Check that we read all records and no more than that
 
     // Test also the non-dynamic version
-    let db2 = FastXReader::new(
+    let db2 = StaticFastXReader::new(
         std::io::BufReader::new(std::fs::File::open("tests/data/reads.fastq").unwrap())).unwrap().into_db().unwrap();
     let db2_records: Vec<RefRecord> = db2.iter().collect();
 
@@ -268,13 +268,13 @@ fn test_empty_file() {
 
     // non-dynamic FASTA reader
     let bufreader = BufReader::new(data.as_slice());
-    let reader = FastXReader::new(bufreader).unwrap();
+    let reader = StaticFastXReader::new(bufreader).unwrap();
     let db = reader.into_db().unwrap(); // Should not panic
     assert_eq!(db.iter().count(), 0);
 
     // non-dynamic FASTQ reader
     let bufreader = BufReader::new(data.as_slice());
-    let reader = FastXReader::new(bufreader).unwrap();
+    let reader = StaticFastXReader::new(bufreader).unwrap();
     let db = reader.into_db().unwrap(); // Should not panic
     assert_eq!(db.iter().count(), 0);
 }
@@ -289,7 +289,7 @@ fn test_flush_on_drop(){
     drop(writer);
 
     // Try to read the record back
-    let mut reader = FastXReader::new(BufReader::new(File::open("/tmp/test.fna").unwrap())).unwrap();
+    let mut reader = StaticFastXReader::new(BufReader::new(File::open("/tmp/test.fna").unwrap())).unwrap();
     let rec = reader.read_next().unwrap().unwrap();
     assert_eq!(rec.head, b"header");
     assert_eq!(rec.seq, b"ACGT");

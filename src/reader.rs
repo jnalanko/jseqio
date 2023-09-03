@@ -6,7 +6,7 @@ use crate::{FileType};
 use crate::record::RefRecord;
 
 // Takes a BufRead because we need read_until.
-pub struct FastXReader<R: std::io::BufRead>{
+pub struct StaticFastXReader<R: std::io::BufRead>{
     pub filetype: FileType,
     pub filename: Option<String>, // Only used for error messages. If None, the file is unknown or there is no file, like when reading from stdin.
     pub input: R,
@@ -47,7 +47,7 @@ impl std::fmt::Display for ParseError{
     }
 }
 
-impl<R: std::io::BufRead> FastXReader<R>{
+impl<R: std::io::BufRead> StaticFastXReader<R>{
 
     fn build_parse_error(&self, message: &str) -> Box<ParseError>{
         Box::new(
@@ -153,7 +153,7 @@ impl<R: std::io::BufRead> FastXReader<R>{
 
     // New with known format
     fn new_with_format(input: R, filetype: FileType) -> Self{
-        FastXReader{filetype,
+        StaticFastXReader{filetype,
                     input,
                     filename: None,
                     seq_buf: Vec::<u8>::new(),
@@ -181,7 +181,7 @@ impl<R: std::io::BufRead> FastXReader<R>{
             } 
         }
 
-        Ok(FastXReader::new_with_format(input, filetype))
+        Ok(StaticFastXReader::new_with_format(input, filetype))
 
     }
 
@@ -272,7 +272,7 @@ impl DynamicFastXReader {
     // Creates a reader from a raw stream of uncompressed data (no gzip detection). Used by other constructors.
     // Need to constrain + 'static because boxed trait objects always need to have a static lifetime.
     fn from_raw_stream<R: std::io::BufRead + 'static>(r: R) -> Result<Self, Box<dyn std::error::Error>>{
-        let reader = FastXReader::<R>::new(r)?;
+        let reader = StaticFastXReader::<R>::new(r)?;
         Ok(DynamicFastXReader {stream: Box::new(reader)})
     }
 
@@ -293,7 +293,7 @@ impl DynamicFastXReader {
 
 // Implement common SeqStream trait for all
 // FastXReaders over the generic parameter R.
-impl<R: BufRead> SeqRecordProducer for FastXReader<R>{
+impl<R: BufRead> SeqRecordProducer for StaticFastXReader<R>{
 
     fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>{
         self.read_next()
