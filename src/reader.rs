@@ -144,7 +144,8 @@ impl<R: std::io::BufRead> FastXReader<R>{
         }
     }
 
-    pub fn new_with_format(input: R, filetype: FileType) -> Self{
+    // New with know format
+    fn new_with_format(input: R, filetype: FileType) -> Self{
         FastXReader{filetype,
                     input,
                     filename: None,
@@ -155,7 +156,7 @@ impl<R: std::io::BufRead> FastXReader<R>{
                     fasta_temp_buf: Vec::<u8>::new(),}
     }
 
-    // Detect whether it's fasta or FASTQ from the first byte.
+    // Detect whether it's fasta or FASTQ based on the first byte.
     pub fn new(mut input: R) -> Result<Self, Box<dyn std::error::Error>>{
         let bytes = input.fill_buf()?;
 
@@ -173,14 +174,7 @@ impl<R: std::io::BufRead> FastXReader<R>{
             } 
         }
 
-        Ok(FastXReader{filetype,
-            input,
-            filename: None,
-            seq_buf: Vec::<u8>::new(),
-            head_buf: Vec::<u8>::new(),
-            qual_buf: Vec::<u8>::new(),
-            plus_buf: Vec::<u8>::new(),
-            fasta_temp_buf: Vec::<u8>::new()})
+        Ok(FastXReader::new_with_format(input, filetype))
 
     }
 
