@@ -144,7 +144,7 @@ impl<R: std::io::BufRead> FastXReader<R>{
         }
     }
 
-    pub fn new(input: R, filetype: FileType) -> Self{
+    pub fn new_with_format(input: R, filetype: FileType) -> Self{
         FastXReader{filetype,
                     input,
                     filename: None,
@@ -155,7 +155,8 @@ impl<R: std::io::BufRead> FastXReader<R>{
                     fasta_temp_buf: Vec::<u8>::new(),}
     }
 
-    pub fn new_detect_format(mut input: R) -> Result<Self, Box<dyn std::error::Error>>{
+    // Detect whether it's fasta or FASTQ from the first byte.
+    pub fn new(mut input: R) -> Result<Self, Box<dyn std::error::Error>>{
         let bytes = input.fill_buf()?;
 
         // Empty file is arbitrarily considered as FASTA
@@ -270,7 +271,7 @@ impl DynamicFastXReader {
     // Creates a reader from a raw stream of uncompressed data (no gzip detection). Used by other constructors.
     // Need to constrain + 'static because boxed trait objects always need to have a static lifetime.
     fn from_raw_stream<R: std::io::BufRead + 'static>(r: R) -> Result<Self, Box<dyn std::error::Error>>{
-        let reader = FastXReader::<R>::new_detect_format(r)?;
+        let reader = FastXReader::<R>::new(r)?;
         Ok(DynamicFastXReader {stream: Box::new(reader)})
     }
 
