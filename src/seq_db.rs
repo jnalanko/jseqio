@@ -1,23 +1,28 @@
-use crate::record::{RefRecord};
+use crate::record::RefRecord;
 
 pub struct SeqDB {
-    pub headbuf: Vec<u8>,
-    pub seqbuf: Vec<u8>,
-    pub qualbuf: Option<Vec<u8>>, // Only exists for Fastq
-    pub head_starts: Vec<usize>, // Contains end sentinel at the end
-    pub seq_starts: Vec<usize>, // Contains end sentinel at the end
-    pub qual_starts: Option<Vec<usize>>, // Contains end sentinel at the end. Only exists for Fastq
+    pub(crate) headbuf: Vec<u8>,
+    pub(crate) seqbuf: Vec<u8>,
+    pub(crate) qualbuf: Option<Vec<u8>>, // Only exists for Fastq
+    pub(crate) head_starts: Vec<usize>, // Contains end sentinel at the end
+    pub(crate) seq_starts: Vec<usize>, // Contains end sentinel at the end
+    pub(crate) qual_starts: Option<Vec<usize>>, // Contains end sentinel at the end. Only exists for Fastq
 }
 
 impl SeqDB{
+
     pub fn iter(&self) -> SeqDBIterator {
         SeqDBIterator{seq_db: self, pos: 0}
     }
 
+    pub fn sequence_count(&self) -> usize{
+        self.head_starts.len() - 1
+        // ^ The -1 is because we have an end sentinel at the end of the head_starts vector
+    }
+
     pub fn get(&self, seq_index: usize) -> Result<RefRecord, Box<dyn std::error::Error>>{
         if seq_index >= self.head_starts.len(){
-            let msg = format!("SeqDB: Sequence index {} not found in database containing {} sequences", seq_index, self.head_starts.len()-1);
-            // ^ The -1 is because we have an end sentinel at the end of the head_starts vector
+            let msg = format!("SeqDB: Sequence index {} not found in database containing {} sequences", seq_index, self.sequence_count());
             return Err(msg.into());
         }
 
