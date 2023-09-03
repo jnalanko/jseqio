@@ -59,89 +59,96 @@ impl<R: std::io::BufRead> FastXReader<R>{
         )
     }
 
-    pub fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>> {
-        if matches!(self.filetype, FileType::FASTQ){
-            // FASTQ format
+    fn read_fasta_record(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>{
+        self.seq_buf.clear();
+        self.head_buf.clear();
 
-            self.seq_buf.clear();
-            self.head_buf.clear();
-            self.qual_buf.clear();
-            self.plus_buf.clear();
-
-            // Read header line
+        // Read header line
+        if self.fasta_temp_buf.is_empty() {
+            // This is the first record -> read header from input
             let bytes_read = self.input.read_until(b'\n', &mut self.head_buf)?;
             if bytes_read == 0 {return Ok(None)} // End of stream
-            if self.head_buf[0] != b'@'{
-                return Err(self.build_parse_error("FASTQ header line does not start with @"));
-            }
-
-            // Read sequence line
-            let bytes_read = self.input.read_until(b'\n', &mut self.seq_buf)?;
-            if bytes_read == 0 {
-                return Err(self.build_parse_error("FASTQ sequence line missing.")); // File can't end here
-            }
-            
-            // read +-line
-            let bytes_read = self.input.read_until(b'\n', &mut self.plus_buf)?;
-            if bytes_read == 0 {
-                return Err(self.build_parse_error("FASTQ + line missing.")); // File can't end here
-            }
-
-            // read qual-line
-            let bytes_read = self.input.read_until(b'\n', &mut self.qual_buf)?;
-            if bytes_read == 0 { // File can't end here
-                return Err(self.build_parse_error("FASTQ quality line missing.")); // File can't end here
-            } else if bytes_read != self.seq_buf.len(){
-                let msg = format!("FASTQ quality line has different length than sequence line ({} vs {})", bytes_read, self.seq_buf.len());
-                return Err(self.build_parse_error(&msg));
-            }
-
-            Ok(Some(RefRecord{head: self.head_buf.as_slice().strip_prefix(b"@").unwrap().strip_suffix(b"\n").unwrap(), 
-                                seq: self.seq_buf.as_slice().strip_suffix(b"\n").unwrap(),
-                                qual: Some(self.qual_buf.as_slice().strip_suffix(b"\n").unwrap())}))
+        } else{
+            // Take stashed header from previous iteration
+            self.head_buf.append(&mut self.fasta_temp_buf); // Also clears the temp buf
         }
-        else{
-            // FASTA format
-            self.seq_buf.clear();
-            self.head_buf.clear();
 
-            // Read header line
-            if self.fasta_temp_buf.is_empty() {
-                // This is the first record -> read header from input
-                let bytes_read = self.input.read_until(b'\n', &mut self.head_buf)?;
-                if bytes_read == 0 {return Ok(None)} // End of stream
+        // Read sequence line
+        loop{
+            let bytes_read = self.input.read_until(b'\n', &mut self.fasta_temp_buf)?;
+            if bytes_read == 0 {
+                // No more bytes left to read
+                if self.seq_buf.is_empty(){
+                    // Stream ends with an empty sequence
+                    return Err(self.build_parse_error("Empty sequence in FASTA file"));
+                }
+                break; // Ok, last record of the file
+            }
+
+            // Check if we read the header of the next read
+            let start = self.fasta_temp_buf.len() as isize - bytes_read as isize;
+            if self.fasta_temp_buf[start as usize] == b'>'{
+                // Found a header. Leave it to the buffer for the next iteration.
+                break;
             } else{
-                // Take stashed header from previous iteration
-                self.head_buf.append(&mut self.fasta_temp_buf); // Also clears the temp buf
+                // Found more sequence -> Append to self.seq_buf
+                self.seq_buf.append(&mut self.fasta_temp_buf); // Also clears the temp buf
+                self.seq_buf.pop(); // Trim newline (TODO: what if there is none?)
             }
-
-            // Read sequence line
-            loop{
-                let bytes_read = self.input.read_until(b'\n', &mut self.fasta_temp_buf)?;
-                if bytes_read == 0 {
-                    // No more bytes left to read
-                    if self.seq_buf.is_empty(){
-                        // Stream ends with an empty sequence
-                        return Err(self.build_parse_error("Empty sequence in FASTA file"));
-                    }
-                    break; // Ok, last record of the file
-                }
-
-                // Check if we read the header of the next read
-                let start = self.fasta_temp_buf.len() as isize - bytes_read as isize;
-                if self.fasta_temp_buf[start as usize] == b'>'{
-                    // Found a header. Leave it to the buffer for the next iteration.
-                    break;
-                } else{
-                    // Found more sequence -> Append to self.seq_buf
-                    self.seq_buf.append(&mut self.fasta_temp_buf); // Also clears the temp buf
-                    self.seq_buf.pop(); // Trim newline (TODO: what if there is none?)
-                }
-            }
-            Ok(Some(RefRecord{head: self.head_buf.as_slice().strip_prefix(b">").unwrap().strip_suffix(b"\n").unwrap(), 
-                                seq: self.seq_buf.as_slice(), // Newlines are already trimmed before
-                                qual: None}))
         }
+        Ok(Some(RefRecord{head: self.head_buf.as_slice().strip_prefix(b">").unwrap().strip_suffix(b"\n").unwrap(), 
+                            seq: self.seq_buf.as_slice(), // Newlines are already trimmed before
+                            qual: None}))
+    }
+
+    fn read_fastq_record(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>{
+
+        self.seq_buf.clear();
+        self.head_buf.clear();
+        self.qual_buf.clear();
+        self.plus_buf.clear();
+
+        // Read header line
+        let bytes_read = self.input.read_until(b'\n', &mut self.head_buf)?;
+        if bytes_read == 0 {return Ok(None)} // End of stream
+        if self.head_buf[0] != b'@'{
+            return Err(self.build_parse_error("FASTQ header line does not start with @"));
+        }
+
+        // Read sequence line
+        let bytes_read = self.input.read_until(b'\n', &mut self.seq_buf)?;
+        if bytes_read == 0 {
+            return Err(self.build_parse_error("FASTQ sequence line missing.")); // File can't end here
+        }
+        
+        // read +-line
+        let bytes_read = self.input.read_until(b'\n', &mut self.plus_buf)?;
+        if bytes_read == 0 {
+            return Err(self.build_parse_error("FASTQ + line missing.")); // File can't end here
+        }
+
+        // read qual-line
+        let bytes_read = self.input.read_until(b'\n', &mut self.qual_buf)?;
+        if bytes_read == 0 { // File can't end here
+            return Err(self.build_parse_error("FASTQ quality line missing.")); // File can't end here
+        } else if bytes_read != self.seq_buf.len(){
+            let msg = format!("FASTQ quality line has different length than sequence line ({} vs {})", bytes_read, self.seq_buf.len());
+            return Err(self.build_parse_error(&msg));
+        }
+
+        Ok(Some(RefRecord{head: self.head_buf.as_slice().strip_prefix(b"@").unwrap().strip_suffix(b"\n").unwrap(), 
+                            seq: self.seq_buf.as_slice().strip_suffix(b"\n").unwrap(),
+                            qual: Some(self.qual_buf.as_slice().strip_suffix(b"\n").unwrap())}))
+    }
+
+    // Read one record from the input.
+    // This is not named just next() because it's not a Rust iterator because it streams the input.
+    pub fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>> {
+        match self.filetype{
+            FileType::FASTA => self.read_fasta_record(),
+            FileType::FASTQ => self.read_fastq_record(),
+        }
+
     }
 
     // New with known format
