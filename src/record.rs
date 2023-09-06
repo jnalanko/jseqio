@@ -4,7 +4,13 @@ pub trait Record{
     fn head(&self) -> &[u8];
     fn seq(&self) -> &[u8];
     fn qual(&self) -> Option<&[u8]>;
+
+    fn name(&self) -> &[u8]{
+        self.head().split(|c| *c == b' ').next().expect("Could not parse sequence name (first space-separated token)")
+    }
 }
+
+// rec.head.split(|c| *c == b' ').next().unwrap()
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct OwnedRecord{
