@@ -13,10 +13,10 @@ use crate::figure_out_file_format;
 pub trait SeqRecordWriter{
     // We can't use the generic Record trait here because then this can not be made into a trait object
     // so we have separate functions for owned and ref records.
-    fn write_owned_record(&mut self, rec: &OwnedRecord);
-    fn write_ref_record(&mut self, rec: &RefRecord);
+    fn write_owned_record(&mut self, rec: &OwnedRecord) -> Result<(), Box<dyn std::error::Error>>;
+    fn write_ref_record(&mut self, rec: &RefRecord) -> Result<(), Box<dyn std::error::Error>>;
 
-    fn flush(&mut self);
+    fn flush(&mut self) -> Result<(), Box<dyn std::error::Error>>;
 }
 
 // A dynamic writer, i.e. one that takes no generics and uses dyn instead
@@ -32,9 +32,10 @@ pub struct FastXWriter<W: Write>{
 
 impl DynamicFastXWriter{
 
-    pub fn write<Rec: Record>(&mut self, rec: &Rec){
+    pub fn write<Rec: Record>(&mut self, rec: &Rec) -> Result<(), Box<dyn std::error::Error>>{
         let r = RefRecord{head: rec.head(), seq: rec.seq(), qual: rec.qual()};
-        self.stream.write_ref_record(&r);
+        self.stream.write_ref_record(&r)?;
+        Ok(())
     }
 
     // No need to give a buffered writer. Buffering is handled internally.
@@ -71,32 +72,29 @@ impl DynamicFastXWriter{
             crate::CompressionType::None => Self::new(io::stdout(), filetype),
         }
     }
-
-    pub fn flush(&mut self){
-        self.stream.flush();
-    }
 }
 
 impl<W: Write> FastXWriter<W>{
-    pub fn write<Rec : Record>(&mut self, rec: &Rec){
+    pub fn write<Rec : Record>(&mut self, rec: &Rec) -> Result<(), std::io::Error> {
         match &self.filetype{
             FileType::FASTA => {
-                self.output.write_all(b">").expect("Error writing output");
-                self.output.write_all(rec.head()).expect("Error writing output");
-                self.output.write_all(b"\n").expect("Error writing output");
-                self.output.write_all(rec.seq()).expect("Error writing output");
-                self.output.write_all(b"\n").expect("Error writing output");
+                self.output.write_all(b">")?;
+                self.output.write_all(rec.head())?;
+                self.output.write_all(b"\n")?;
+                self.output.write_all(rec.seq())?;
+                self.output.write_all(b"\n")?;
             }
             FileType::FASTQ => {
-                self.output.write_all(b"@").expect("Error writing output");
-                self.output.write_all(rec.head()).expect("Error writing output");
-                self.output.write_all(b"\n").expect("Error writing output");
-                self.output.write_all(rec.seq()).expect("Error writing output");
-                self.output.write_all(b"\n+\n").expect("Error writing output");
-                self.output.write_all(rec.qual().expect("Quality values missing")).expect("Error writing output");
-                self.output.write_all(b"\n").expect("Error writing output");
+                self.output.write_all(b"@")?;
+                self.output.write_all(rec.head())?;
+                self.output.write_all(b"\n")?;
+                self.output.write_all(rec.seq())?;
+                self.output.write_all(b"\n+\n")?;
+                self.output.write_all(rec.qual().expect("Quality values missing"))?;
+                self.output.write_all(b"\n")?;
             }
         }
+        Ok(())
     }
 
     pub fn new(output: W, filetype: FileType) -> Self{
@@ -106,42 +104,49 @@ impl<W: Write> FastXWriter<W>{
         }
     }
 
-    pub fn flush(&mut self){
-        self.output.flush().expect("Error flushing output stream");
+    pub fn flush(&mut self) -> Result<(), std::io::Error>{
+        self.output.flush()?;
+        Ok(())
     }
 
     // Returns the internal write-struct.
     // Also flushes the internal buffer.
-    pub fn into_inner(mut self) -> W{
-        self.flush();
-        self.output.into_parts().0
+    pub fn into_inner(mut self) -> Result<W, std::io::Error>{
+        self.flush()?;
+        Ok(self.output.into_parts().0)
     }
 }
 
 impl<W: Write> SeqRecordWriter for FastXWriter<W>{
-    fn write_ref_record(&mut self, rec: &RefRecord) {
-        self.write(rec);
+    fn write_ref_record(&mut self, rec: &RefRecord) -> Result<(), Box<dyn std::error::Error>>{
+        self.write(rec)?;
+        Ok(())
     }
 
-    fn write_owned_record(&mut self, rec: &OwnedRecord) {
-        self.write(rec);
+    fn write_owned_record(&mut self, rec: &OwnedRecord) -> Result<(), Box<dyn std::error::Error>>{
+        self.write(rec)?;
+        Ok(())
     }
 
-    fn flush(&mut self){
-        self.output.flush().expect("Error flushing output stream");
+    fn flush(&mut self) -> Result<(), Box<dyn std::error::Error>>{
+        self.output.flush()?;
+        Ok(())
     }
 }
 
 impl SeqRecordWriter for DynamicFastXWriter{
-    fn write_ref_record(&mut self, rec: &RefRecord) {
-        self.stream.write_ref_record(rec);
+    fn write_ref_record(&mut self, rec: &RefRecord) -> Result<(), Box<dyn std::error::Error>> {
+        self.stream.write_ref_record(rec)?;
+        Ok(())
     }
 
-    fn write_owned_record(&mut self, rec: &OwnedRecord) {
-        self.stream.write_owned_record(rec);
+    fn write_owned_record(&mut self, rec: &OwnedRecord) -> Result<(), Box<dyn std::error::Error>> {
+        self.stream.write_owned_record(rec)?;
+        Ok(())
     }
 
-    fn flush(&mut self){
-        self.stream.flush();
+    fn flush(&mut self) -> Result<(), Box<dyn std::error::Error>>{
+        self.stream.flush()?;
+        Ok(())
     }
 }

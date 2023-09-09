@@ -60,11 +60,10 @@ fn fastq() {
     let mut writer = FastXWriter::<Vec<u8>>::new(out_buf, FileType::FASTQ);
 
     for rec in owned_records.iter() {
-        writer.write(&rec.as_ref_record());
+        writer.write(&rec.as_ref_record()).unwrap();
     }
 
-    writer.flush();
-    let written_data = writer.output.into_inner().unwrap();
+    let written_data = writer.into_inner().unwrap();
 
     // Read the records back from written data and compare to originals.
 
@@ -138,11 +137,10 @@ fn fasta() {
     let mut writer = FastXWriter::<Vec<u8>>::new(out_buf, FileType::FASTA);
 
     for rec in owned_records.iter() {
-        writer.write(&rec.as_ref_record());
+        writer.write(&rec.as_ref_record()).unwrap();
     }
 
-    writer.flush();
-    let written_data = writer.output.into_inner().unwrap();
+    let written_data = writer.into_inner().unwrap();
 
     // This written data may not exactly equal the original data,
     // because the length of FASTA sequence lines is not fixed.
@@ -298,7 +296,7 @@ fn test_flush_on_drop(){
     let bw = BufWriter::new(File::create("/tmp/test.fna").unwrap());
     let mut writer = FastXWriter::<BufWriter<File>>::new(bw, FileType::FASTA);
     let rec = OwnedRecord{head: b"header".to_vec(), seq: b"ACGT".to_vec(), qual: None};
-    writer.write(&rec);
+    writer.write(&rec).unwrap();
 
     drop(writer);
 
