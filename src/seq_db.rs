@@ -1,12 +1,12 @@
 use crate::record::{RefRecord, Record};
 
 pub struct SeqDB {
-    pub(crate) headbuf: Vec<u8>,
-    pub(crate) seqbuf: Vec<u8>,
-    pub(crate) qualbuf: Option<Vec<u8>>, // Only exists for Fastq
-    pub(crate) head_starts: Vec<usize>, // Contains end sentinel at the end
-    pub(crate) seq_starts: Vec<usize>, // Contains end sentinel at the end
-    pub(crate) qual_starts: Option<Vec<usize>>, // Contains end sentinel at the end. Only exists for Fastq
+    headbuf: Vec<u8>,
+    seqbuf: Vec<u8>,
+    qualbuf: Option<Vec<u8>>, // Only exists for Fastq
+    head_starts: Vec<usize>, // Contains end sentinel at the end
+    seq_starts: Vec<usize>, // Contains end sentinel at the end
+    qual_starts: Option<Vec<usize>>, // Contains end sentinel at the end. Only exists for Fastq
 }
 
 impl SeqDB{
