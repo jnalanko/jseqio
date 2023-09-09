@@ -92,3 +92,28 @@ pub fn figure_out_file_format<P: AsRef<Path>>(filepath: P) -> (FileType, bool){
         panic!("Unkown file extension: {}", filename);
     }
 }
+
+pub fn complement(c: u8) -> u8{
+    match c{
+        b'A' => b'T',
+        b'T' => b'A',
+        b'G' => b'C',
+        b'C' => b'G',
+        b'a' => b't',
+        b't' => b'a',
+        b'g' => b'c',
+        b'c' => b'g',
+        _ => panic!("Invalid nucleotide: {}", c),
+    }
+}
+
+pub fn reverse_complement(seq: &[u8]) -> Vec<u8>{
+    seq.iter().rev().map(|&c| complement(c)).collect()
+}
+
+pub fn reverse_complemen_in_place(seq: &mut [u8]){
+    for i in 0..seq.len(){
+        seq[i] = complement(seq[i]);
+    }
+    seq.reverse();
+}

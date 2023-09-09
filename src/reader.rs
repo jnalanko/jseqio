@@ -2,8 +2,8 @@ use ex::fs::File; // File streams that include the filename in the error message
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use flate2::read::MultiGzDecoder;
-use crate::{FileType};
-use crate::record::RefRecord;
+use crate::{FileType, reverse_complemen_in_place};
+use crate::record::{RefRecord, OwnedRecord};
 
 // Takes a BufRead because we need read_until.
 pub struct StaticFastXReader<R: std::io::BufRead>{
@@ -185,9 +185,46 @@ impl<R: std::io::BufRead> StaticFastXReader<R>{
 
     }
 
-    /*pub fn into_db_with_revcomp(mut self) -> Result<(crate::seq_db::SeqDB, crate::seq_db::SeqDB), Box<dyn std::error::Error>>{
-        todo!();
-    }*/
+    pub fn into_db_with_revcomp(mut self) -> Result<(crate::seq_db::SeqDB, crate::seq_db::SeqDB), Box<dyn std::error::Error>>{
+        let store_qual = match self.filetype{
+            FileType::FASTA => false,
+            FileType::FASTQ => true,
+        };
+
+        // Reusable record for storing the reverse complement
+        let mut rc_record = 
+        OwnedRecord{
+            head: Vec::new(), 
+            seq: Vec::new(),
+            qual: match store_qual{
+                true => Some(Vec::new()),
+                false => None,
+            }
+        };
+
+        let mut fw_db = crate::seq_db::SeqDB::new(store_qual);
+        let mut rc_db = crate::seq_db::SeqDB::new(store_qual);
+        while let Some(rec) = self.read_next()?{
+            fw_db.push_record(rec);
+
+            // Copy fw record data to rc record
+            rc_record.head.clear();
+            rc_record.head.extend_from_slice(rec.head);
+            rc_record.seq.clear();
+            rc_record.seq.extend_from_slice(rec.seq);
+            if let Some(qual) = &mut rc_record.qual{
+                qual.clear();
+                qual.extend_from_slice(rec.qual.unwrap());
+            }
+
+            // Reverse complement and push to database
+            rc_record.reverse_complement();
+            rc_db.push_record(rc_record.as_ref_record());
+        }
+        fw_db.shrink_to_fit();
+        rc_db.shrink_to_fit();
+        Ok((fw_db, rc_db))
+    }
 
     pub fn into_db(mut self) -> Result<crate::seq_db::SeqDB, Box<dyn std::error::Error>>{
         let store_qual = match self.filetype{
