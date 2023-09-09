@@ -1,4 +1,4 @@
-use crate::record::{RefRecord, Record};
+use crate::record::{RefRecord};
 
 pub struct SeqDB {
     headbuf: Vec<u8>,

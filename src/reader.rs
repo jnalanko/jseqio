@@ -2,7 +2,7 @@ use ex::fs::File; // File streams that include the filename in the error message
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use flate2::read::MultiGzDecoder;
-use crate::{FileType, reverse_complemen_in_place};
+use crate::{FileType};
 use crate::record::{RefRecord, OwnedRecord};
 
 // Takes a BufRead because we need read_until.
@@ -25,6 +25,7 @@ trait SeqRecordProducer {
     // Since we want to call this for trait objects where we don't know the size of the struct,
     // We need to take self in a Box.
     fn into_db_boxed(self: Box<Self>) -> Result<crate::seq_db::SeqDB, Box<dyn std::error::Error>>;
+    fn into_db_with_revcomp_boxed(self: Box<Self>) -> Result<(crate::seq_db::SeqDB, crate::seq_db::SeqDB), Box<dyn std::error::Error>>;
 
     fn filetype(&self)-> FileType; 
 
@@ -316,6 +317,10 @@ impl DynamicFastXReader {
         self.stream.into_db_boxed()
     }
 
+    pub fn into_db_with_revcomp(self) -> Result<(crate::seq_db::SeqDB, crate::seq_db::SeqDB), Box<dyn std::error::Error>>{
+        self.stream.into_db_with_revcomp_boxed()
+    }
+
 }
 
 // Implement common SeqRecordProducer trait for all
@@ -333,6 +338,10 @@ impl<R: BufRead> SeqRecordProducer for StaticFastXReader<R>{
     fn into_db_boxed(self: Box<Self>) -> Result<crate::seq_db::SeqDB, Box<dyn std::error::Error>>{
         self.into_db()
     }
+
+    fn into_db_with_revcomp_boxed(self: Box<Self>) -> Result<(crate::seq_db::SeqDB, crate::seq_db::SeqDB), Box<dyn std::error::Error>>{
+        self.into_db_with_revcomp()
+    }    
 
     fn set_filepath(&mut self, filepath: &Path){
         self.filename = Some(filepath.as_os_str().to_str().unwrap().to_owned());

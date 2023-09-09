@@ -252,8 +252,22 @@ fn test_into_db(){
     let db2 = StaticFastXReader::new(
         std::io::BufReader::new(std::fs::File::open("tests/data/reads.fastq").unwrap())).unwrap().into_db().unwrap();
     let db2_records: Vec<RefRecord> = db2.iter().collect();
-
     assert_eq!(db_records, db2_records);
+
+}
+
+#[test]
+fn test_into_db_with_rc(){
+    let reader = DynamicFastXReader::from_file(&String::from("tests/data/reads.fastq")).unwrap();
+    let (fw_db, rc_db) = reader.into_db_with_revcomp().unwrap();
+    assert_eq!(fw_db.sequence_count(), rc_db.sequence_count());
+    for i in 0..fw_db.sequence_count(){
+        let fw_rec = fw_db.get(i).unwrap();
+        let rc_rec = rc_db.get(i).unwrap();
+        assert_eq!(fw_rec.head, rc_rec.head);
+        assert_eq!(reverse_complement(&fw_rec.seq), rc_rec.seq);
+        assert_eq!(fw_rec.qual.unwrap().iter().rev().map(|x| *x).collect::<Vec::<u8>>(), rc_rec.qual.unwrap().to_owned());
+    }
 }
 
 #[test]

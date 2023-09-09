@@ -1,7 +1,5 @@
 use std::fmt;
 
-use crate::reverse_complemen_in_place;
-
 pub trait Record{
     fn head(&self) -> &[u8];
     fn seq(&self) -> &[u8];
@@ -51,7 +49,7 @@ impl OwnedRecord{
     }
 
     pub fn reverse_complement(&mut self){
-        reverse_complemen_in_place(&mut self.seq);
+        crate::reverse_complement_in_place(&mut self.seq);
         if let Some(qual) = &mut self.qual{
             qual.reverse();
         }

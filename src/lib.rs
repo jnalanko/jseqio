@@ -103,7 +103,7 @@ pub fn complement(c: u8) -> u8{
         b't' => b'a',
         b'g' => b'c',
         b'c' => b'g',
-        _ => panic!("Invalid nucleotide: {}", c),
+        other => other,
     }
 }
 
@@ -111,7 +111,7 @@ pub fn reverse_complement(seq: &[u8]) -> Vec<u8>{
     seq.iter().rev().map(|&c| complement(c)).collect()
 }
 
-pub fn reverse_complemen_in_place(seq: &mut [u8]){
+pub fn reverse_complement_in_place(seq: &mut [u8]){
     for i in 0..seq.len(){
         seq[i] = complement(seq[i]);
     }
