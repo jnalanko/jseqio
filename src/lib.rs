@@ -74,6 +74,12 @@ pub enum FileType{
     FASTQ,
 }
 
+#[derive(Copy, Clone, Debug)]
+pub enum CompressionType{
+    Gzip,
+    None,
+} // This could be just a bool, but in the future we may want to support other compression types as well
+
 // Returns (file type, is_gzipped)
 pub fn figure_out_file_format<P: AsRef<Path>>(filepath: P) -> (FileType, bool){
     let filename = filepath.as_ref().as_os_str().to_str().unwrap();

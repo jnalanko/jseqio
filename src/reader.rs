@@ -248,6 +248,7 @@ impl<R: std::io::BufRead> StaticFastXReader<R>{
 
 pub struct DynamicFastXReader {
     stream: Box<dyn SeqRecordProducer>,
+    compression_type: crate::CompressionType,
 }
 
 // A class that contains a dynamic trait object for different
@@ -291,17 +292,17 @@ impl DynamicFastXReader {
 
                 // We wrap this in BufReader because the FastX parser requires buffered reading
                 let gzbufdecoder = BufReader::<MultiGzDecoder::<R>>::new(gzdecoder);
-                Self::from_raw_stream(gzbufdecoder)
+                Self::from_raw_stream(gzbufdecoder, crate::CompressionType::Gzip)
             },
-            false => Self::from_raw_stream(input)
+            false => Self::from_raw_stream(input, crate::CompressionType::None)
         }
     }
 
     // Creates a reader from a raw stream of uncompressed data (no gzip detection). Used by other constructors.
     // Need to constrain + 'static because boxed trait objects always need to have a static lifetime.
-    fn from_raw_stream<R: std::io::BufRead + 'static>(r: R) -> Result<Self, Box<dyn std::error::Error>>{
+    fn from_raw_stream<R: std::io::BufRead + 'static>(r: R, compression_type: crate::CompressionType) -> Result<Self, Box<dyn std::error::Error>>{
         let reader = StaticFastXReader::<R>::new(r)?;
-        Ok(DynamicFastXReader {stream: Box::new(reader)})
+        Ok(DynamicFastXReader {stream: Box::new(reader), compression_type})
     }
 
     // Returns None if no more records
@@ -319,6 +320,10 @@ impl DynamicFastXReader {
 
     pub fn into_db_with_revcomp(self) -> Result<(crate::seq_db::SeqDB, crate::seq_db::SeqDB), Box<dyn std::error::Error>>{
         self.stream.into_db_with_revcomp_boxed()
+    }
+
+    pub fn compression_type(&self) -> crate::CompressionType{
+        self.compression_type
     }
 
 }
