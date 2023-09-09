@@ -63,11 +63,10 @@ impl DynamicFastXWriter{
         }
     }
 
-    pub fn new_to_stdout(filetype: FileType, gzipped: bool) -> Self {
-        if gzipped {
-            Self::new(GzEncoder::new(io::stdout(), Compression::fast()), filetype)
-        } else {
-            Self::new(io::stdout(), filetype)
+    pub fn new_to_stdout(filetype: FileType, compression_type: crate::CompressionType) -> Self {
+        match compression_type{
+            crate::CompressionType::Gzip => Self::new(GzEncoder::new(io::stdout(), Compression::fast()), filetype),
+            crate::CompressionType::None => Self::new(io::stdout(), filetype),
         }
     }
 
