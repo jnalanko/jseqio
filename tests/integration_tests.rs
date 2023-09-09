@@ -260,8 +260,8 @@ fn test_into_db_with_rc(){
     let (fw_db, rc_db) = reader.into_db_with_revcomp().unwrap();
     assert_eq!(fw_db.sequence_count(), rc_db.sequence_count());
     for i in 0..fw_db.sequence_count(){
-        let fw_rec = fw_db.get(i).unwrap();
-        let rc_rec = rc_db.get(i).unwrap();
+        let fw_rec = fw_db.get(i);
+        let rc_rec = rc_db.get(i);
         assert_eq!(fw_rec.head, rc_rec.head);
         assert_eq!(reverse_complement(&fw_rec.seq), rc_rec.seq);
         assert_eq!(fw_rec.qual.unwrap().iter().rev().map(|x| *x).collect::<Vec::<u8>>(), rc_rec.qual.unwrap().to_owned());

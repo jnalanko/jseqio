@@ -20,10 +20,9 @@ impl SeqDB{
         // ^ The -1 is because we have an end sentinel at the end of the head_starts vector
     }
 
-    pub fn get(&self, seq_index: usize) -> Result<RefRecord, Box<dyn std::error::Error>>{
+    pub fn get(&self, seq_index: usize) -> RefRecord{
         if seq_index >= self.head_starts.len(){
-            let msg = format!("SeqDB: Sequence index {} not found in database containing {} sequences", seq_index, self.sequence_count());
-            return Err(msg.into());
+            panic!("SeqDB: Sequence index {} not found in database containing {} sequences", seq_index, self.sequence_count());
         }
 
         let head = &self.headbuf[self.head_starts[seq_index]..self.head_starts[seq_index+1]];
@@ -36,7 +35,7 @@ impl SeqDB{
             }
             None => None, // No quality values
         };
-        Ok(RefRecord{head, seq, qual})
+        RefRecord{head, seq, qual}
     }
 
     pub fn new(with_quality_values: bool) -> SeqDB{
@@ -91,7 +90,7 @@ impl<'a> Iterator for SeqDBIterator<'a> {
         match self.pos{
             i if i < self.seq_db.head_starts.len() - 1 => { // Iteration is not finished yet
                 self.pos += 1; // Advance pointer to next element for the next round
-                Some(self.seq_db.get(i).unwrap()) // Should never be out of bounds so we unwrap the error.
+                Some(self.seq_db.get(i)) // Should never be out of bounds so we unwrap the error.
             }
             _ => None, // End of iteration
         }
