@@ -1,4 +1,4 @@
-use crate::record::RefRecord;
+use crate::record::{RefRecord, Record};
 
 pub struct SeqDB {
     pub(crate) headbuf: Vec<u8>,
@@ -37,7 +37,46 @@ impl SeqDB{
             None => None, // No quality values
         };
         Ok(RefRecord{head, seq, qual})
-    }    
+    }
+
+    pub fn new(with_quality_values: bool) -> SeqDB{
+        let headbuf: Vec<u8> = Vec::new();
+        let seqbuf: Vec<u8> = Vec::new();
+        let qualbuf: Option<Vec<u8>> = match with_quality_values{
+            true => Some(Vec::new()),
+            false => None,
+        };
+
+        let head_starts: Vec<usize> = vec![0];
+        let seq_starts: Vec<usize> = vec![0];
+        let qual_starts: Option<Vec<usize>> = match with_quality_values{
+            true => Some(vec![0]),
+            false => None,
+        };
+
+        SeqDB{headbuf, seqbuf, qualbuf, head_starts, seq_starts, qual_starts}
+    }
+
+    pub fn push_record<R: crate::record::Record>(&mut self, rec: R){
+        self.headbuf.extend_from_slice(rec.head());
+        self.seqbuf.extend_from_slice(rec.seq());
+        if self.qualbuf.is_some(){
+            if let Some(qual) = rec.qual(){
+                self.qualbuf.as_mut().unwrap().extend_from_slice(qual);
+                self.qual_starts.as_mut().unwrap().push(self.qualbuf.as_ref().unwrap().len());
+            }
+        }
+        self.head_starts.push(self.headbuf.len());
+        self.seq_starts.push(self.seqbuf.len());
+    }
+
+    pub fn shrink_to_fit(&mut self){
+        self.headbuf.shrink_to_fit();
+        self.seqbuf.shrink_to_fit();
+        if let Some(qualbuf) = &mut self.qualbuf{
+            qualbuf.shrink_to_fit();
+        }
+    }
 }
 
 pub struct SeqDBIterator<'a>{

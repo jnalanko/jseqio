@@ -185,32 +185,22 @@ impl<R: std::io::BufRead> StaticFastXReader<R>{
 
     }
 
+    /*pub fn into_db_with_revcomp(mut self) -> Result<(crate::seq_db::SeqDB, crate::seq_db::SeqDB), Box<dyn std::error::Error>>{
+        todo!();
+    }*/
+
     pub fn into_db(mut self) -> Result<crate::seq_db::SeqDB, Box<dyn std::error::Error>>{
-        let mut headbuf: Vec<u8> = Vec::new();
-        let mut seqbuf: Vec<u8> = Vec::new();
-        let mut qualbuf: Option<Vec<u8>> = match self.filetype{
-            FileType::FASTQ => Some(Vec::new()),
-            FileType::FASTA => None,
+        let store_qual = match self.filetype{
+            FileType::FASTA => false,
+            FileType::FASTQ => true,
         };
 
-        let mut head_starts: Vec<usize> = vec![0];
-        let mut seq_starts: Vec<usize> = vec![0];
-        let mut qual_starts: Option<Vec<usize>> = match self.filetype{
-            FileType::FASTQ => Some(vec![0]),
-            FileType::FASTA => None,
-        };
-
+        let mut db = crate::seq_db::SeqDB::new(store_qual);
         while let Some(rec) = self.read_next()?{
-            headbuf.extend_from_slice(rec.head);
-            seqbuf.extend_from_slice(rec.seq);
-            if let Some(qual) = rec.qual{
-                qualbuf.as_mut().expect("Error: found a fastq record in a fasta stream.").extend_from_slice(qual);
-                qual_starts.as_mut().unwrap().push(qualbuf.as_ref().unwrap().len());
-            }
-            head_starts.push(headbuf.len());
-            seq_starts.push(seqbuf.len());
+            db.push_record(rec);
         }
-        Ok(crate::seq_db::SeqDB{headbuf, seqbuf, qualbuf, head_starts, seq_starts, qual_starts})
+        db.shrink_to_fit();
+        Ok(db)
     }
 
 
