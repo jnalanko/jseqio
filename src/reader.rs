@@ -19,7 +19,7 @@ pub struct StaticFastXReader<R: std::io::BufRead>{
 
 // Trait for a stream returning RefRecord objects, used in DynamicFastXReader to abstract over
 // The input stream type.
-trait SeqRecordProducer {
+pub trait SeqRecordProducer {
     fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>;
 
     // Since we want to call this for trait objects where we don't know the size of the struct,
@@ -305,15 +305,6 @@ impl DynamicFastXReader {
         Ok(DynamicFastXReader {stream: Box::new(reader), compression_type})
     }
 
-    // Returns None if no more records
-    pub fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>{
-        self.stream.read_next()
-    }
-
-    pub fn filetype(&self)-> FileType{
-        self.stream.filetype()
-    }
-
     pub fn into_db(self) -> Result<crate::seq_db::SeqDB, Box<dyn std::error::Error>>{
         self.stream.into_db_boxed()
     }
@@ -326,6 +317,29 @@ impl DynamicFastXReader {
         self.compression_type
     }
 
+}
+
+impl SeqRecordProducer for DynamicFastXReader {
+    fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>{
+        self.stream.read_next()
+    }
+
+    fn filetype(&self)-> FileType{
+        self.stream.filetype()
+    }
+
+    fn into_db_boxed(self: Box<Self>) -> Result<crate::seq_db::SeqDB, Box<dyn std::error::Error>>{
+        self.into_db()
+    }
+
+    fn into_db_with_revcomp_boxed(self: Box<Self>) -> Result<(crate::seq_db::SeqDB, crate::seq_db::SeqDB), Box<dyn std::error::Error>>{
+        self.into_db_with_revcomp()
+    }    
+    
+    // For error messages
+    fn set_filepath(&mut self, filepath: &Path){
+        self.stream.set_filepath(filepath);
+    }
 }
 
 // Implement common SeqRecordProducer trait for all
@@ -348,6 +362,7 @@ impl<R: BufRead> SeqRecordProducer for StaticFastXReader<R>{
         self.into_db_with_revcomp()
     }    
 
+    // For error messages
     fn set_filepath(&mut self, filepath: &Path){
         self.filename = Some(filepath.as_os_str().to_str().unwrap().to_owned());
     }

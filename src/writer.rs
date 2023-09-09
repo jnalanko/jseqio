@@ -7,14 +7,15 @@ use flate2::Compression;
 use flate2::write::GzEncoder;
 
 use crate::FileType;
-use crate::record::{RefRecord, Record};
+use crate::record::{RefRecord,OwnedRecord,Record};
 use crate::figure_out_file_format;
 
-trait SeqRecordWriter{
-    // Can not take a Record trait object because then we can't
-    // for some reason put a SeqRecordWriter into a box.
-    // So we take the header, sequence and quality values as slices.
-    fn write(&mut self, head: &[u8], seq: &[u8], qual: Option<&[u8]>);
+pub trait SeqRecordWriter{
+    // We can't use the generic Record trait here because then this can not be made into a trait object
+    // so we have separate functions for owned and ref records.
+    fn write_owned_record(&mut self, rec: &OwnedRecord);
+    fn write_ref_record(&mut self, rec: &RefRecord);
+
     fn flush(&mut self);
 }
 
@@ -32,7 +33,8 @@ pub struct FastXWriter<W: Write>{
 impl DynamicFastXWriter{
 
     pub fn write<Rec: Record>(&mut self, rec: &Rec){
-        self.stream.write(rec.head(), rec.seq(), rec.qual());
+        let r = RefRecord{head: rec.head(), seq: rec.seq(), qual: rec.qual()};
+        self.stream.write_ref_record(&r);
     }
 
     // No need to give a buffered writer. Buffering is handled internally.
@@ -107,15 +109,39 @@ impl<W: Write> FastXWriter<W>{
     pub fn flush(&mut self){
         self.output.flush().expect("Error flushing output stream");
     }
+
+    // Returns the internal write-struct.
+    // Also flushes the internal buffer.
+    pub fn into_inner(mut self) -> W{
+        self.flush();
+        self.output.into_parts().0
+    }
 }
 
 impl<W: Write> SeqRecordWriter for FastXWriter<W>{
-    fn write(&mut self, head: &[u8], seq: &[u8], qual: Option<&[u8]>){
-        let rec = RefRecord{head, seq, qual};
-        self.write(&rec);
+    fn write_ref_record(&mut self, rec: &RefRecord) {
+        self.write(rec);
+    }
+
+    fn write_owned_record(&mut self, rec: &OwnedRecord) {
+        self.write(rec);
     }
 
     fn flush(&mut self){
         self.output.flush().expect("Error flushing output stream");
+    }
+}
+
+impl SeqRecordWriter for DynamicFastXWriter{
+    fn write_ref_record(&mut self, rec: &RefRecord) {
+        self.stream.write_ref_record(rec);
+    }
+
+    fn write_owned_record(&mut self, rec: &OwnedRecord) {
+        self.stream.write_owned_record(rec);
+    }
+
+    fn flush(&mut self){
+        self.stream.flush();
     }
 }

@@ -29,7 +29,7 @@
 //! ## Streaming all sequences in a file and printing them to the standard output.
 //! 
 //! ```
-//! use jseqio::reader::DynamicFastXReader;
+//! use jseqio::reader::*;
 //! fn main() -> Result<(), Box<dyn std::error::Error>>{
 //!     // Reading from a FASTQ file. Also works for FASTA,
 //!     // and seamlessly with/without gzip compression.
