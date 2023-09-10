@@ -2,6 +2,7 @@ use ex::fs::File; // File streams that include the filename in the error message
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use flate2::read::MultiGzDecoder;
+use crate::seq_db::SeqDB;
 use crate::{FileType};
 use crate::record::{RefRecord, OwnedRecord};
 
@@ -186,25 +187,24 @@ impl<R: std::io::BufRead> StaticFastXReader<R>{
 
     }
 
-    pub fn into_db_with_revcomp(mut self) -> Result<(crate::seq_db::SeqDB, crate::seq_db::SeqDB), Box<dyn std::error::Error>>{
-        let store_qual = match self.filetype{
-            FileType::FASTA => false,
-            FileType::FASTQ => true,
-        };
+    pub fn into_db_with_revcomp(mut self) -> Result<(SeqDB, SeqDB), Box<dyn std::error::Error>>{
 
         // Reusable record for storing the reverse complement
         let mut rc_record = 
         OwnedRecord{
             head: Vec::new(), 
             seq: Vec::new(),
-            qual: match store_qual{
-                true => Some(Vec::new()),
-                false => None,
+            qual: match self.filetype{
+                FileType::FASTA => None,
+                FileType::FASTQ => Some(Vec::new()),
             }
         };
 
-        let mut fw_db = crate::seq_db::SeqDB::new(store_qual);
-        let mut rc_db = crate::seq_db::SeqDB::new(store_qual);
+        let (mut fw_db, mut rc_db) = match self.filetype{
+            FileType::FASTA => (SeqDB::new_without_quality_values(), SeqDB::new_without_quality_values()),
+            FileType::FASTQ => (SeqDB::new(), SeqDB::new()),
+        };
+
         while let Some(rec) = self.read_next()?{
             fw_db.push_record(rec);
 
@@ -228,12 +228,11 @@ impl<R: std::io::BufRead> StaticFastXReader<R>{
     }
 
     pub fn into_db(mut self) -> Result<crate::seq_db::SeqDB, Box<dyn std::error::Error>>{
-        let store_qual = match self.filetype{
-            FileType::FASTA => false,
-            FileType::FASTQ => true,
+        let mut db = match self.filetype{
+            FileType::FASTA => SeqDB::new_without_quality_values(),
+            FileType::FASTQ => SeqDB::new(),
         };
 
-        let mut db = crate::seq_db::SeqDB::new(store_qual);
         while let Some(rec) = self.read_next()?{
             db.push_record(rec);
         }

@@ -38,22 +38,19 @@ impl SeqDB{
         RefRecord{head, seq, qual}
     }
 
-    pub fn new(with_quality_values: bool) -> SeqDB{
+    pub fn new_without_quality_values() -> SeqDB{
         let headbuf: Vec<u8> = Vec::new();
         let seqbuf: Vec<u8> = Vec::new();
-        let qualbuf: Option<Vec<u8>> = match with_quality_values{
-            true => Some(Vec::new()),
-            false => None,
-        };
-
         let head_starts: Vec<usize> = vec![0];
         let seq_starts: Vec<usize> = vec![0];
-        let qual_starts: Option<Vec<usize>> = match with_quality_values{
-            true => Some(vec![0]),
-            false => None,
-        };
+        SeqDB{headbuf, seqbuf, qualbuf: None, head_starts, seq_starts, qual_starts: None}
+    }
 
-        SeqDB{headbuf, seqbuf, qualbuf, head_starts, seq_starts, qual_starts}
+    pub fn new() -> SeqDB{
+        let mut db = Self::new_without_quality_values();
+        db.qualbuf = Some(Vec::new());
+        db.qual_starts = Some(vec![0]);
+        db
     }
 
     pub fn push_record<R: crate::record::Record>(&mut self, rec: R){
