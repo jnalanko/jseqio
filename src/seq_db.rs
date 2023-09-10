@@ -93,3 +93,9 @@ impl<'a> Iterator for SeqDBIterator<'a> {
         }
     }
 }
+
+impl ExactSizeIterator for SeqDBIterator<'_> {
+    fn len(&self) -> usize {
+        self.seq_db.sequence_count()
+    }
+}
