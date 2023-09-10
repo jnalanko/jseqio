@@ -3,10 +3,13 @@ use crate::record::{RefRecord};
 pub struct SeqDB {
     headbuf: Vec<u8>,
     seqbuf: Vec<u8>,
-    qualbuf: Option<Vec<u8>>, // Only exists for Fastq
+    qualbuf: Vec<u8>,
     head_starts: Vec<usize>, // Contains end sentinel at the end
     seq_starts: Vec<usize>, // Contains end sentinel at the end
-    qual_starts: Option<Vec<usize>>, // Contains end sentinel at the end. Only exists for Fastq
+    qual_starts: Vec<usize>, // Contains end sentinel at the end.
+
+    // A mix of records with and without quality values is allowed. Then
+    // the quality value slices will have length 0 for records without quality values.
 }
 
 impl SeqDB{
@@ -27,51 +30,48 @@ impl SeqDB{
 
         let head = &self.headbuf[self.head_starts[seq_index]..self.head_starts[seq_index+1]];
         let seq = &self.seqbuf[self.seq_starts[seq_index]..self.seq_starts[seq_index+1]];
-        let qual = match &self.qualbuf{
-            Some(buf) => { // Have quality values
-                let start = self.qual_starts.as_ref().unwrap()[seq_index];   
-                let end = self.qual_starts.as_ref().unwrap()[seq_index+1];
-                Some(&buf[start..end])
+        let qual = {
+            let start = self.qual_starts[seq_index];   
+            let end = self.qual_starts[seq_index+1];
+            if start == end {
+                None
             }
-            None => None, // No quality values
+            else {
+                Some(&self.qualbuf[start..end])
+            }
         };
         RefRecord{head, seq, qual}
     }
 
-    pub fn new_without_quality_values() -> SeqDB{
+    pub fn new() -> SeqDB{
         let headbuf: Vec<u8> = Vec::new();
         let seqbuf: Vec<u8> = Vec::new();
+        let qualbuf: Vec<u8> = Vec::new();
+
         let head_starts: Vec<usize> = vec![0];
         let seq_starts: Vec<usize> = vec![0];
-        SeqDB{headbuf, seqbuf, qualbuf: None, head_starts, seq_starts, qual_starts: None}
-    }
-
-    pub fn new() -> SeqDB{
-        let mut db = Self::new_without_quality_values();
-        db.qualbuf = Some(Vec::new());
-        db.qual_starts = Some(vec![0]);
-        db
+        let qual_starts: Vec<usize> = vec![0];
+        
+        SeqDB{headbuf, seqbuf, qualbuf, head_starts, seq_starts, qual_starts}
     }
 
     pub fn push_record<R: crate::record::Record>(&mut self, rec: R){
         self.headbuf.extend_from_slice(rec.head());
         self.seqbuf.extend_from_slice(rec.seq());
-        if self.qualbuf.is_some(){
-            if let Some(qual) = rec.qual(){
-                self.qualbuf.as_mut().unwrap().extend_from_slice(qual);
-                self.qual_starts.as_mut().unwrap().push(self.qualbuf.as_ref().unwrap().len());
-            }
-        }
         self.head_starts.push(self.headbuf.len());
         self.seq_starts.push(self.seqbuf.len());
+
+        if let Some(qual) = rec.qual(){
+            // Record has quality values
+            self.qualbuf.extend_from_slice(qual);
+        }
+        self.qual_starts.push(self.qualbuf.len());
     }
 
     pub fn shrink_to_fit(&mut self){
         self.headbuf.shrink_to_fit();
         self.seqbuf.shrink_to_fit();
-        if let Some(qualbuf) = &mut self.qualbuf{
-            qualbuf.shrink_to_fit();
-        }
+        self.qualbuf.shrink_to_fit();
     }
 }
 

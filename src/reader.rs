@@ -200,10 +200,8 @@ impl<R: std::io::BufRead> StaticFastXReader<R>{
             }
         };
 
-        let (mut fw_db, mut rc_db) = match self.filetype{
-            FileType::FASTA => (SeqDB::new_without_quality_values(), SeqDB::new_without_quality_values()),
-            FileType::FASTQ => (SeqDB::new(), SeqDB::new()),
-        };
+        let mut fw_db = SeqDB::new();
+        let mut rc_db = SeqDB::new();
 
         while let Some(rec) = self.read_next()?{
             fw_db.push_record(rec);
@@ -228,10 +226,7 @@ impl<R: std::io::BufRead> StaticFastXReader<R>{
     }
 
     pub fn into_db(mut self) -> Result<crate::seq_db::SeqDB, Box<dyn std::error::Error>>{
-        let mut db = match self.filetype{
-            FileType::FASTA => SeqDB::new_without_quality_values(),
-            FileType::FASTQ => SeqDB::new(),
-        };
+        let mut db = SeqDB::new();
 
         while let Some(rec) = self.read_next()?{
             db.push_record(rec);
