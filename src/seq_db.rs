@@ -68,6 +68,15 @@ impl SeqDB{
         self.qual_starts.push(self.qualbuf.len());
     }
 
+    // Push a sequence with no quality values or header
+    pub fn push_seq(&mut self, seq: &[u8]){
+        self.seqbuf.extend_from_slice(seq);
+        self.seq_starts.push(self.seqbuf.len());
+
+        self.head_starts.push(self.headbuf.len()); // Empty header
+        self.qual_starts.push(self.qualbuf.len()); // Empty quality values
+    }
+
     pub fn shrink_to_fit(&mut self){
         self.headbuf.shrink_to_fit();
         self.seqbuf.shrink_to_fit();
