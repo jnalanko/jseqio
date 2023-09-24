@@ -21,7 +21,7 @@ pub trait SeqRecordWriter{
 
 // A dynamic writer, i.e. one that takes no generics and uses dyn instead
 pub struct DynamicFastXWriter {
-    stream: Box<dyn SeqRecordWriter>,
+    stream: Box<dyn SeqRecordWriter + Send>,
 }
 
 // Non-dynamic writer, i.e. a writer that takes the internal stream as a generic parameter
@@ -40,7 +40,7 @@ impl DynamicFastXWriter{
 
     // No need to give a buffered writer. Buffering is handled internally.
     // If a buffered writer is given, then it will be buffered twice.
-    pub fn new<W: Write + 'static>(stream: W, filetype: FileType) -> Self{
+    pub fn new<W: Write + 'static + Send>(stream: W, filetype: FileType) -> Self{
         let writer = FastXWriter::<W>::new(stream, filetype);
         DynamicFastXWriter {stream: Box::new(writer)}
     }
