@@ -24,7 +24,7 @@ pub trait SeqStream{
 
 // Trait for a stream returning RefRecord objects, used in DynamicFastXReader to abstract over
 // The input stream type.
-pub trait SeqRecordProducer { // TODO: rename. The name shouuld indicate the the scope of this trait is wider than that of SeqStream
+pub trait SeqRecordProducer { // TODO: rename. The name should indicate the the scope of this trait is wider than that of SeqStream
     fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>;
 
     // Since we want to call this for trait objects where we don't know the size of the struct,
@@ -321,33 +321,22 @@ impl DynamicFastXReader {
         self.compression_type
     }
 
-}
-
-impl SeqRecordProducer for DynamicFastXReader {
-    fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>{
+    pub fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>{
         self.stream.read_next()
     }
 
-    fn filetype(&self)-> FileType{
+    pub fn filetype(&self)-> FileType{
         self.stream.filetype()
     }
-
-    fn into_db_boxed(self: Box<Self>) -> Result<crate::seq_db::SeqDB, Box<dyn std::error::Error>>{
-        self.into_db()
-    }
-
-    fn into_db_with_revcomp_boxed(self: Box<Self>) -> Result<(crate::seq_db::SeqDB, crate::seq_db::SeqDB), Box<dyn std::error::Error>>{
-        self.into_db_with_revcomp()
-    }    
     
     // For error messages
-    fn set_filepath(&mut self, filepath: &Path){
+    pub fn set_filepath(&mut self, filepath: &Path){
         self.stream.set_filepath(filepath);
     }
 }
 
 // Implement common SeqRecordProducer trait for all
-// FastXReaders over the generic parameter R.
+// StaticFastXReaders over the generic parameter R.
 impl<R: BufRead> SeqRecordProducer for StaticFastXReader<R>{
 
     fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>{
