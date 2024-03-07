@@ -24,7 +24,7 @@ pub trait SeqStream{
 
 // Trait for a stream returning RefRecord objects, used in DynamicFastXReader to abstract over
 // The input stream type.
-pub trait SeqRecordProducer { // TODO: rename. The name should indicate the the scope of this trait is wider than that of SeqStream
+trait JSeqIOReaderInterface{
     fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>;
 
     // Since we want to call this for trait objects where we don't know the size of the struct,
@@ -38,7 +38,7 @@ pub trait SeqRecordProducer { // TODO: rename. The name should indicate the the 
     fn set_filepath(&mut self, filepath: &Path);
 }
 
-impl SeqStream for dyn SeqRecordProducer{
+impl SeqStream for dyn JSeqIOReaderInterface{
     fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>{
         self.read_next()
     }
@@ -251,7 +251,7 @@ impl<R: std::io::BufRead> StaticFastXReader<R>{
 
 
 pub struct DynamicFastXReader {
-    stream: Box<dyn SeqRecordProducer + Send>,
+    stream: Box<dyn JSeqIOReaderInterface + Send>,
     compression_type: crate::CompressionType,
 }
 
@@ -337,7 +337,7 @@ impl DynamicFastXReader {
 
 // Implement common SeqRecordProducer trait for all
 // StaticFastXReaders over the generic parameter R.
-impl<R: BufRead> SeqRecordProducer for StaticFastXReader<R>{
+impl<R: BufRead> JSeqIOReaderInterface for StaticFastXReader<R>{
 
     fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>{
         self.read_next()
