@@ -38,12 +38,6 @@ trait JSeqIOReaderInterface{
     fn set_filepath(&mut self, filepath: &Path);
 }
 
-impl SeqStream for dyn JSeqIOReaderInterface{
-    fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>{
-        self.read_next()
-    }
-}
-
 #[derive(Debug)]
 pub struct ParseError{
     pub message: String,
@@ -335,6 +329,7 @@ impl DynamicFastXReader {
     }
 }
 
+
 // Implement common SeqRecordProducer trait for all
 // StaticFastXReaders over the generic parameter R.
 impl<R: BufRead> JSeqIOReaderInterface for StaticFastXReader<R>{
@@ -362,3 +357,14 @@ impl<R: BufRead> JSeqIOReaderInterface for StaticFastXReader<R>{
 
 }
 
+impl SeqStream for DynamicFastXReader {
+    fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>> {
+        DynamicFastXReader::read_next(self)
+    }
+}
+
+impl<R: BufRead> SeqStream for StaticFastXReader<R> {
+    fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>> {
+        StaticFastXReader::read_next(self)
+    }
+}
