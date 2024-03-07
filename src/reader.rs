@@ -18,9 +18,13 @@ pub struct StaticFastXReader<R: std::io::BufRead>{
     pub fasta_temp_buf: Vec<u8>, // Stores the fasta header read in the previous iteration
 }
 
+pub trait SeqStream{
+    fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>;
+}
+
 // Trait for a stream returning RefRecord objects, used in DynamicFastXReader to abstract over
 // The input stream type.
-pub trait SeqRecordProducer {
+pub trait SeqRecordProducer { // TODO: rename. The name shouuld indicate the the scope of this trait is wider than that of SeqStream
     fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>;
 
     // Since we want to call this for trait objects where we don't know the size of the struct,
@@ -32,6 +36,12 @@ pub trait SeqRecordProducer {
 
     // For error messages
     fn set_filepath(&mut self, filepath: &Path);
+}
+
+impl SeqStream for dyn SeqRecordProducer{
+    fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>{
+        self.read_next()
+    }
 }
 
 #[derive(Debug)]
