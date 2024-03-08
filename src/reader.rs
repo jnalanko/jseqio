@@ -368,3 +368,55 @@ impl<R: BufRead> SeqStream for StaticFastXReader<R> {
         StaticFastXReader::read_next(self)
     }
 }
+
+// Turns a SeqStream into another SeqStream that also streams the reverse
+// complements of the original stream. See read_next() for more information.
+pub struct SeqStreamWithRevComp<S: SeqStream> {
+    inner: S,
+    rec: OwnedRecord,
+    parity: bool, // Every other sequence we return is a reverse complement of the previous
+}
+
+impl<S: SeqStream> SeqStreamWithRevComp<S> {
+    pub fn new(inner: S) -> Self{
+        Self{
+            inner,
+            rec: OwnedRecord{seq: Vec::new(), head: Vec::new(), qual: None},
+            parity: false,
+        }
+    }
+}
+
+impl<S: SeqStream> SeqStream for SeqStreamWithRevComp<S> {
+    // If the original sequence stream is x1,x2,x3..., returns sequences in the order
+    // x1, rc(x1), x2, rc(x2), x3, rc(x3)...
+    fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>> {
+        self.parity = !self.parity;
+
+        if self.parity {
+            let new = match self.inner.read_next()? {
+                None => return Ok(None), // End of stream
+                Some(r) => r
+            };
+
+            // Copy the record to self storage for reverse complementation later
+            self.rec.head.clear();
+            self.rec.head.extend(new.head);
+            self.rec.seq.clear();
+            self.rec.seq.extend(new.seq);
+            if let Some(q) = new.qual {
+                if self.rec.qual.is_none() {
+                    self.rec.qual = Some(Vec::<u8>::new());
+                }
+                self.rec.qual.as_mut().unwrap().clear();
+                self.rec.qual.as_mut().unwrap().extend(q);
+            }
+
+            return Ok(Some(self.rec.as_ref_record()));
+
+        } else {
+            crate::reverse_complement_in_place(&mut self.rec.seq);
+            return Ok(Some(self.rec.as_ref_record()));
+        }
+    }
+}

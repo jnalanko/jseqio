@@ -16,17 +16,17 @@ fn get_test_filenames() -> Vec<&'static str>{
 
 #[test]
 fn fastq() {
-    let headers = vec![
+    let headers = [
         "SRR403017.1 HWUSI-EAS108E_0007:3:1:3797:973/1",
         "SRR403017.2 HWUSI-EAS108E_0007:3:1:10327:976/1",
         "SRR403017.3 HWUSI-EAS108E_0007:3:1:13569:972/1",
     ];
-    let seqs = vec![
+    let seqs = [
         "TTGGACCGGCGCAAGACGGACCAGNGCGAAAGCATTTGCCAAGAANNNN",
         "CAACTTTCTATCTGGCATTCCCTGNGGAGGAAATAGAATGCGCGCNNNN",
         "GATCGGAAGAGCACACGTCTGAACNCCAGTCACTTAGGCATCTCGNNNN",
     ];
-    let quals = vec![
+    let quals = [
         "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQ",
         "RSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~####",
         "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",
@@ -41,6 +41,7 @@ fn fastq() {
         fastq_data.push_str(format!("{}\n", quals[i]).as_str());
     }
 
+    // Test Static reader
     let input = BufReader::new(fastq_data.as_bytes());
     let mut reader = StaticFastXReader::new(input).unwrap();
 
@@ -54,6 +55,27 @@ fn fastq() {
         seqs_read += 1;
     }
     assert_eq!(seqs_read, n_seqs);
+
+    // Test reverse complement stream
+
+    let input = BufReader::new(fastq_data.as_bytes()); // Shadows previous input
+    let reader = StaticFastXReader::new(input).unwrap(); // Shadows
+    let mut rc_reader = jseqio::reader::SeqStreamWithRevComp::new(reader); 
+
+    let mut seqs_read = 0; // Shadows
+    while let Some(record) = rc_reader.read_next().unwrap() {
+        let mut correct_seq = seqs[seqs_read / 2].as_bytes().to_owned();
+        eprintln!("{}", record);
+        if seqs_read % 2 == 1 {
+            jseqio::reverse_complement_in_place(&mut correct_seq);
+        }
+
+        assert_eq!(record.head, headers[seqs_read/2].as_bytes());
+        assert_eq!(record.seq, correct_seq);
+        assert_eq!(record.qual.unwrap(), quals[seqs_read/2].as_bytes());
+        seqs_read += 1;
+    }
+    assert_eq!(seqs_read, n_seqs*2);
 
     // Test writer
     let out_buf: Vec<u8> = vec![];
