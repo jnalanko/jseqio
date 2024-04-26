@@ -2,6 +2,9 @@
 name = "jseqio"
 version = "0.1.0"
 edition = "2021"
+license-file = "LICENSE.txt"
+description = "Reading and writing biological sequences in FASTA or FASTQ format."
+repository = "https://github.com/jnalanko/jseqio"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
