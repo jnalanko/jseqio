@@ -1,7 +1,8 @@
 [package]
 name = "jseqio"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
+license = "MIT"
 license-file = "LICENSE.txt"
 description = "Reading and writing biological sequences in FASTA or FASTQ format."
 repository = "https://github.com/jnalanko/jseqio"
