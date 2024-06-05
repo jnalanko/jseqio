@@ -102,6 +102,12 @@ impl<R: std::io::BufRead> StaticFastXReader<R>{
                 self.seq_buf.pop(); // Trim newline (TODO: what if there is none?)
             }
         }
+
+        // Make sure all letters are in same case
+        for c in self.seq_buf.iter_mut() {
+            c.make_ascii_uppercase();
+        }
+
         Ok(Some(RefRecord{head: self.head_buf.as_slice().strip_prefix(b">").unwrap().strip_suffix(b"\n").unwrap(), 
                             seq: self.seq_buf.as_slice(), // Newlines are already trimmed before
                             qual: None}))
@@ -140,6 +146,11 @@ impl<R: std::io::BufRead> StaticFastXReader<R>{
         } else if bytes_read != self.seq_buf.len(){
             let msg = format!("FASTQ quality line has different length than sequence line ({} vs {})", bytes_read, self.seq_buf.len());
             return Err(self.build_parse_error(&msg));
+        }
+
+        // Make sure all letters are in same case
+        for c in self.seq_buf.iter_mut() {
+            c.make_ascii_uppercase();
         }
 
         Ok(Some(RefRecord{head: self.head_buf.as_slice().strip_prefix(b"@").unwrap().strip_suffix(b"\n").unwrap(), 

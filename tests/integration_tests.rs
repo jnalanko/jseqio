@@ -21,10 +21,15 @@ fn fastq() {
         "SRR403017.2 HWUSI-EAS108E_0007:3:1:10327:976/1",
         "SRR403017.3 HWUSI-EAS108E_0007:3:1:13569:972/1",
     ];
-    let seqs = [
+    let seqs_uppercase = [
         "TTGGACCGGCGCAAGACGGACCAGNGCGAAAGCATTTGCCAAGAANNNN",
         "CAACTTTCTATCTGGCATTCCCTGNGGAGGAAATAGAATGCGCGCNNNN",
         "GATCGGAAGAGCACACGTCTGAACNCCAGTCACTTAGGCATCTCGNNNN",
+    ];
+    let seqs = [
+        "TTGGaCCGGCGCAAGACGGACCAGNGCGAAAGCATTTGCCAAGAANNNN",
+        "CAACtTTcTATCTGGCATTCCCTGNGGAGGAAATAGAATGCGCGCNNNN",
+        "GATCGGAAgAGCACACGTCTGAACNCCAGTCACTTAGGCATCTCGNNNN",
     ];
     let quals = [
         "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQ",
@@ -49,7 +54,7 @@ fn fastq() {
     let mut seqs_read = 0;
     while let Some(record) = reader.read_next().unwrap() {
         assert_eq!(record.head, headers[seqs_read].as_bytes());
-        assert_eq!(record.seq, seqs[seqs_read].as_bytes());
+        assert_eq!(record.seq, seqs_uppercase[seqs_read].as_bytes());
         assert_eq!(record.qual.unwrap(), quals[seqs_read].as_bytes());
         owned_records.push(record.to_owned());
         seqs_read += 1;
@@ -64,7 +69,7 @@ fn fastq() {
 
     let mut seqs_read = 0; // Shadows
     while let Some(record) = rc_reader.read_next().unwrap() {
-        let mut correct_seq = seqs[seqs_read / 2].as_bytes().to_owned();
+        let mut correct_seq = seqs_uppercase[seqs_read / 2].as_bytes().to_owned();
         eprintln!("{}", record);
         if seqs_read % 2 == 1 {
             jseqio::reverse_complement_in_place(&mut correct_seq);
@@ -94,7 +99,7 @@ fn fastq() {
     while let Some(record) = reader2.read_next().unwrap() {
         dbg!(&record);
         assert_eq!(record.head, headers[seqs_read2].as_bytes());
-        assert_eq!(record.seq, seqs[seqs_read2].as_bytes());
+        assert_eq!(record.seq, seqs_uppercase[seqs_read2].as_bytes());
         assert_eq!(record.qual.unwrap(), quals[seqs_read2].as_bytes());
         seqs_read2 += 1;
     }
@@ -108,10 +113,15 @@ fn fasta() {
         "SRR403017.2 HWUSI-EAS108E_0007:3:1:10327:976/1".to_owned(),
         "SRR403017.3 HWUSI-EAS108E_0007:3:1:13569:972/1".to_owned(),
     ];
-    let seqs: Vec<String> = vec![
+    let seqs_uppercase: Vec<String> = vec![
         "TTGGACCGGCGCAAGACGGACCAGNGCGAAAGCATTTGCCAAGAANNNN".to_owned(),
         "CAACTTTCTATCTGGCATTCCCTGNGGAGGAAATAGAATGCGCGCNNNN".to_owned(),
         "GATCGGAAGAGCACACGTCTGAACNCCAGTCACTTAGGCATCTCGNNNN".to_owned(),
+    ];
+    let seqs: Vec<String> = vec![
+        "TTGGaCCGGCGCAAGACGGACCAGNGCGAAAGCATTTGCCAAGAANNNN".to_owned(),
+        "CAACttTCTATCTgGCATTCCCTGNGGAGGAAATAGAATGCGCGCNNNN".to_owned(),
+        "GATCGGAAGAGCAcACGTCTGAACNCCAGTCACTTAGGCATCTCGNNNN".to_owned(),
     ];
 
     fn split_seq_to_lines(seq: &String, line_length: usize) -> Vec<String> {
@@ -147,7 +157,7 @@ fn fasta() {
     while let Some(record) = reader.read_next().unwrap() {
         dbg!(&record);
         assert_eq!(record.head, headers[seqs_read].as_bytes());
-        assert_eq!(record.seq, seqs[seqs_read].as_bytes());
+        assert_eq!(record.seq, seqs_uppercase[seqs_read].as_bytes());
         assert_eq!(record.qual, None);
         owned_records.push(record.to_owned());
         seqs_read += 1;
@@ -173,7 +183,7 @@ fn fasta() {
     while let Some(record) = reader2.read_next().unwrap() {
         dbg!(&record);
         assert_eq!(record.head, headers[seqs_read2].as_bytes());
-        assert_eq!(record.seq, seqs[seqs_read2].as_bytes());
+        assert_eq!(record.seq, seqs_uppercase[seqs_read2].as_bytes());
         assert_eq!(record.qual, None);
         seqs_read2 += 1;
     }
