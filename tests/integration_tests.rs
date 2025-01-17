@@ -231,6 +231,29 @@ fn gzip_auto_detection(){
 }
 
 #[test]
+fn mutable_records() {
+    let true_seqs = get_sequences("tests/data/reads.fastq");
+
+    let mut fastq_reader = DynamicFastXReader::from_file(&String::from("tests/data/reads.fastq")).unwrap(); 
+    let mut seq_idx = 0_usize;
+    while let Some(rec) = fastq_reader.read_next_mut().unwrap() {
+        assert_eq!(rec.seq, true_seqs[seq_idx]);
+        jseqio::reverse_complement_in_place(rec.seq); // This should compile
+        assert_eq!(rec.seq, reverse_complement(&true_seqs[seq_idx]));
+        seq_idx += 1;
+    }
+
+    let mut fasta_reader = DynamicFastXReader::from_file(&String::from("tests/data/reads.fna")).unwrap(); 
+    let mut seq_idx = 0_usize;
+    while let Some(rec) = fasta_reader.read_next_mut().unwrap() {
+        assert_eq!(rec.seq, true_seqs[seq_idx]);
+        jseqio::reverse_complement_in_place(rec.seq); // This should compile
+        assert_eq!(rec.seq, reverse_complement(&true_seqs[seq_idx]));
+        seq_idx += 1;
+    }
+}
+
+#[test]
 fn fastq_errors() {
     // Not enough quality values
     let reader = get_test_reader("@SRR403017.1 HWUSI-EAS108E_0007:3:1:3797:973/1\nACGT\n+\nIII\n".as_bytes()).unwrap();

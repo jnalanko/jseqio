@@ -26,6 +26,7 @@ pub trait SeqStream{
 // The input stream type.
 trait JSeqIOReaderInterface{
     fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>;
+    fn read_next_mut(&mut self) -> Result<Option<MutRefRecord>, Box<dyn std::error::Error>>;
 
     // Since we want to call this for trait objects where we don't know the size of the struct,
     // We need to take self in a Box.
@@ -352,6 +353,10 @@ impl DynamicFastXReader {
         self.stream.read_next()
     }
 
+    pub fn read_next_mut(&mut self) -> Result<Option<MutRefRecord>, Box<dyn std::error::Error>>{
+        self.stream.read_next_mut()
+    }
+
     pub fn filetype(&self)-> FileType{
         self.stream.filetype()
     }
@@ -369,6 +374,10 @@ impl<R: BufRead> JSeqIOReaderInterface for StaticFastXReader<R>{
 
     fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>{
         self.read_next()
+    }
+
+    fn read_next_mut(&mut self) -> Result<Option<MutRefRecord>, Box<dyn std::error::Error>> {
+        self.read_next_mut()
     }
 
     fn filetype(&self)-> FileType{
