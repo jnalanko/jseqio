@@ -4,7 +4,7 @@ use std::path::Path;
 use flate2::read::MultiGzDecoder;
 use crate::seq_db::SeqDB;
 use crate::{FileType};
-use crate::record::{RefRecord, OwnedRecord};
+use crate::record::{MutRefRecord, OwnedRecord, RefRecord};
 
 // Takes a BufRead because we need read_until.
 pub struct StaticFastXReader<R: std::io::BufRead>{
@@ -65,7 +65,7 @@ impl<R: std::io::BufRead> StaticFastXReader<R>{
         )
     }
 
-    fn read_fasta_record(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>{
+    fn read_fasta_record(&mut self) -> Result<Option<MutRefRecord>, Box<dyn std::error::Error>>{
         self.seq_buf.clear();
         self.head_buf.clear();
 
@@ -108,12 +108,18 @@ impl<R: std::io::BufRead> StaticFastXReader<R>{
             c.make_ascii_uppercase();
         }
 
-        Ok(Some(RefRecord{head: self.head_buf.as_slice().strip_prefix(b">").unwrap().strip_suffix(b"\n").unwrap(), 
-                            seq: self.seq_buf.as_slice(), // Newlines are already trimmed before
+        // Trim '>' and '\n' from the header 
+        assert!(self.head_buf[0] == b'>');
+        assert!(*self.head_buf.last().unwrap() == b'\n');
+        let head_buf_len = self.head_buf.len();
+        let head = &mut self.head_buf.as_mut_slice()[1..head_buf_len-1]; // Remove '>' and '\n'
+
+        Ok(Some(MutRefRecord{head: head, 
+                            seq: self.seq_buf.as_mut_slice(), // Newlines are already trimmed before
                             qual: None}))
     }
 
-    fn read_fastq_record(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>>{
+    fn read_fastq_record(&mut self) -> Result<Option<MutRefRecord>, Box<dyn std::error::Error>>{
 
         self.seq_buf.clear();
         self.head_buf.clear();
@@ -126,12 +132,16 @@ impl<R: std::io::BufRead> StaticFastXReader<R>{
         if self.head_buf[0] != b'@'{
             return Err(self.build_parse_error("FASTQ header line does not start with @"));
         }
+        assert!(self.head_buf.last().unwrap() == &b'\n');
+        self.head_buf.pop(); // Trim the '\n'
 
         // Read sequence line
         let bytes_read = self.input.read_until(b'\n', &mut self.seq_buf)?;
         if bytes_read == 0 {
             return Err(self.build_parse_error("FASTQ sequence line missing.")); // File can't end here
         }
+        assert!(self.seq_buf.last().unwrap() == &b'\n');
+        self.seq_buf.pop(); // Trim the '\n'
         
         // read +-line
         let bytes_read = self.input.read_until(b'\n', &mut self.plus_buf)?;
@@ -143,8 +153,11 @@ impl<R: std::io::BufRead> StaticFastXReader<R>{
         let bytes_read = self.input.read_until(b'\n', &mut self.qual_buf)?;
         if bytes_read == 0 { // File can't end here
             return Err(self.build_parse_error("FASTQ quality line missing.")); // File can't end here
-        } else if bytes_read != self.seq_buf.len(){
-            let msg = format!("FASTQ quality line has different length than sequence line ({} vs {})", bytes_read, self.seq_buf.len());
+        } 
+        assert!(self.qual_buf.last().unwrap() == &b'\n');
+        self.qual_buf.pop(); // Trim the '\n'
+        if self.qual_buf.len() != self.seq_buf.len() {
+            let msg = format!("FASTQ quality line has different length than sequence line ({} vs {})", self.qual_buf.len(), self.seq_buf.len());
             return Err(self.build_parse_error(&msg));
         }
 
@@ -153,19 +166,28 @@ impl<R: std::io::BufRead> StaticFastXReader<R>{
             c.make_ascii_uppercase();
         }
 
-        Ok(Some(RefRecord{head: self.head_buf.as_slice().strip_prefix(b"@").unwrap().strip_suffix(b"\n").unwrap(), 
-                            seq: self.seq_buf.as_slice().strip_suffix(b"\n").unwrap(),
-                            qual: Some(self.qual_buf.as_slice().strip_suffix(b"\n").unwrap())}))
+        assert!(self.head_buf[0] == b'@');
+        Ok(Some(MutRefRecord{head: &mut self.head_buf[1..], // Remove '@'
+                            seq: &mut self.seq_buf,
+                            qual: Some(&mut self.qual_buf)}))
     }
 
     // Read one record from the input.
     // This is not named just next() because it's not a Rust iterator because it streams the input.
     pub fn read_next(&mut self) -> Result<Option<RefRecord>, Box<dyn std::error::Error>> {
         match self.filetype{
+            FileType::FASTA => self.read_fasta_record().map(|opt| opt.map(|rec| rec.into_shared_ref())),
+            FileType::FASTQ => self.read_fastq_record().map(|opt| opt.map(|rec| rec.into_shared_ref())),
+        }
+    }
+
+    // Read one record from the input.
+    // This is not named just next() because it's not a Rust iterator because it streams the input.
+    pub fn read_next_mut(&mut self) -> Result<Option<MutRefRecord>, Box<dyn std::error::Error>> {
+        match self.filetype{
             FileType::FASTA => self.read_fasta_record(),
             FileType::FASTQ => self.read_fastq_record(),
         }
-
     }
 
     // New with known format

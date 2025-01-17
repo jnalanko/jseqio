@@ -26,6 +26,13 @@ pub struct RefRecord<'a>{
     pub qual: Option<&'a [u8]>, // If FASTA, this is None
 }
 
+#[derive(Debug, Hash, PartialEq, Eq)] // Can not be copied or cloned because of the mutable references
+pub struct MutRefRecord<'a>{
+    pub head: &'a mut [u8],    
+    pub seq: &'a mut [u8],
+    pub qual: Option<&'a mut [u8]>, // If FASTA, this is None
+}
+
 impl<'a> RefRecord<'a>{
     pub fn to_owned(&self) -> OwnedRecord{
         OwnedRecord { 
@@ -33,6 +40,21 @@ impl<'a> RefRecord<'a>{
             seq: self.seq.to_vec(), 
             qual: self.qual.map(|q| q.to_vec()),
         }
+    }
+}
+
+impl<'a> MutRefRecord<'a>{
+    pub fn to_owned(&self) -> OwnedRecord{
+        let rr = RefRecord{head: self.head, seq: self.seq, qual: self.qual.as_deref()};
+        rr.to_owned()
+    }
+
+    pub fn into_shared_ref(self) -> RefRecord<'a>{
+        let qual_reborrow = match self.qual{
+            Some(q) => Some(&*q),
+            None => None,
+        };
+        RefRecord{head: &*self.head, seq: &*self.seq, qual: qual_reborrow}
     }
 }
 
@@ -63,6 +85,12 @@ impl<'a> Record for RefRecord<'a>{
     fn qual(&self) -> Option<&[u8]>{self.qual}
 }
 
+impl<'a> Record for MutRefRecord<'a>{
+    fn head(&self) -> &[u8]{self.head}
+    fn seq(&self) -> &[u8]{self.seq}
+    fn qual(&self) -> Option<&[u8]>{self.qual.as_deref()}
+}
+
 impl Record for OwnedRecord{
     fn head(&self) -> &[u8]{self.head.as_slice()}
     fn seq(&self) -> &[u8]{self.seq.as_slice()}
@@ -86,5 +114,12 @@ impl<'a> fmt::Display for RefRecord<'a> {
                }
                
         )
+    }
+}
+
+impl<'a> fmt::Display for MutRefRecord<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let rr = RefRecord{head: self.head, seq: self.seq, qual: self.qual.as_deref()};
+        rr.fmt(f)
     }
 }
