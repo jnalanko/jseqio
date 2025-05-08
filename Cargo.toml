@@ -1,6 +1,6 @@
 [package]
 name = "jseqio"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 license = "MIT"
 description = "Reading and writing biological sequences in FASTA or FASTQ format."

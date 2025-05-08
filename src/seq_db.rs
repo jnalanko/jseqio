@@ -1,4 +1,4 @@
-use crate::record::{RefRecord};
+use crate::record::{MutRefRecord, RefRecord};
 
 pub struct SeqDB {
     headbuf: Vec<u8>,
@@ -21,6 +21,27 @@ impl SeqDB{
     pub fn sequence_count(&self) -> usize{
         self.head_starts.len() - 1
         // ^ The -1 is because we have an end sentinel at the end of the head_starts vector
+    }
+
+    pub fn get_mut(&mut self, seq_index: usize) -> MutRefRecord {
+        if seq_index >= self.head_starts.len(){
+            panic!("SeqDB: Sequence index {} not found in database containing {} sequences", seq_index, self.sequence_count());
+        }
+
+        let head = &mut self.headbuf[self.head_starts[seq_index]..self.head_starts[seq_index+1]];
+        let seq = &mut self.seqbuf[self.seq_starts[seq_index]..self.seq_starts[seq_index+1]];
+        let qual = {
+            let start = self.qual_starts[seq_index];
+            let end = self.qual_starts[seq_index+1];
+            if start == end {
+                None
+            }
+            else {
+                Some(&mut self.qualbuf[start..end])
+            }
+        };
+        MutRefRecord{head, seq, qual}
+
     }
 
     pub fn get(&self, seq_index: usize) -> RefRecord{
