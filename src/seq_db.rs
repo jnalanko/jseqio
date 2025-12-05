@@ -23,6 +23,10 @@ impl SeqDB{
         // ^ The -1 is because we have an end sentinel at the end of the head_starts vector
     }
 
+    pub fn total_seq_len(&self) -> usize{
+        self.seqbuf.len()
+    }
+
     pub fn get_mut(&mut self, seq_index: usize) -> MutRefRecord {
         if seq_index >= self.head_starts.len(){
             panic!("SeqDB: Sequence index {} not found in database containing {} sequences", seq_index, self.sequence_count());

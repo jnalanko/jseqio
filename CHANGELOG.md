@@ -1,3 +1,7 @@
+# v0.1.6
+
+Add `total_seq_len()` to SeqDB.
+
 # v0.1.5
 
 Add `get_mut` to SeqDB
