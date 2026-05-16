@@ -279,7 +279,7 @@ impl<R: std::io::BufRead> StaticFastXReader<R>{
 
 
 pub struct DynamicFastXReader {
-    stream: Box<dyn JSeqIOReaderInterface + Send>,
+    stream: Box<dyn JSeqIOReaderInterface + Send + Sync>,
     compression_type: crate::CompressionType,
 }
 
@@ -303,7 +303,7 @@ impl DynamicFastXReader {
     }
 
     // New from stream, with automatic gzip detection
-    pub fn new<R: std::io::BufRead + 'static + Send>(mut input: R) -> Result<Self, Box<dyn std::error::Error>>{
+    pub fn new<R: std::io::BufRead + 'static + Send + Sync>(mut input: R) -> Result<Self, Box<dyn std::error::Error>>{
         let bytes = input.fill_buf()?;
         let mut gzipped = false;
         match bytes.len(){
@@ -332,7 +332,7 @@ impl DynamicFastXReader {
 
     // Creates a reader from a raw stream of uncompressed data (no gzip detection). Used by other constructors.
     // Need to constrain + 'static because boxed trait objects always need to have a static lifetime.
-    fn from_raw_stream<R: std::io::BufRead + 'static + Send>(r: R, compression_type: crate::CompressionType) -> Result<Self, Box<dyn std::error::Error>>{
+    fn from_raw_stream<R: std::io::BufRead + 'static + Send + Sync>(r: R, compression_type: crate::CompressionType) -> Result<Self, Box<dyn std::error::Error>>{
         let reader = StaticFastXReader::<R>::new(r)?;
         Ok(DynamicFastXReader {stream: Box::new(reader), compression_type})
     }

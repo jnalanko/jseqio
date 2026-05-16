@@ -1,3 +1,7 @@
+# v0.1.7
+
+Make DynamicFastXReader Sync.
+
 # v0.1.6
 
 Add `total_seq_len()` to SeqDB.
